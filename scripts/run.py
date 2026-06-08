@@ -1,19 +1,17 @@
 import os
 import json
-import time
 import requests
 from datetime import datetime, date
-from google import genai
-from google.genai import types
 
 # ─── Config from GitHub Secrets ───────────────────────────────────────────────
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID   = os.environ["TELEGRAM_CHAT_ID"]
 GEMINI_API_KEY     = os.environ["GEMINI_API_KEY"]
 
-# ─── Gemini client ────────────────────────────────────────────────────────────
-gemini_client = genai.Client(api_key=GEMINI_API_KEY)
-GEMINI_MODEL  = "gemini-2.5-flash"
+GEMINI_URL = (
+    f"https://generativelanguage.googleapis.com/v1beta/models/"
+    f"gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+)
 
 # ─── Load files ───────────────────────────────────────────────────────────────
 with open("curriculum.json", "r") as f:
@@ -127,35 +125,24 @@ Rules:
 - Output ONLY valid JSON. No markdown, no backticks, no extra text.
 """
 
-    # Retry up to 3 times with backoff for rate limit errors
-    for attempt in range(3):
-        try:
-            response = gemini_client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.4,
-                    thinking_config=types.ThinkingConfig(thinking_level="disabled")
-                )
-            )
-            text = response.text.strip()
+    body = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.4}
+    }
 
-            # Strip markdown code fences if Gemini adds them
-            if text.startswith("```"):
-                text = text.split("```")[1]
-                if text.startswith("json"):
-                    text = text[4:]
-            text = text.strip()
+    response = requests.post(GEMINI_URL, json=body, timeout=30)
+    response.raise_for_status()
+    raw = response.json()
+    text = raw["candidates"][0]["content"]["parts"][0]["text"].strip()
 
-            return json.loads(text)
+    # Strip markdown code fences if Gemini adds them
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+    text = text.strip()
 
-        except Exception as e:
-            if "429" in str(e) and attempt < 2:
-                wait = 30 * (attempt + 1)  # 30s, then 60s
-                print(f"Rate limited. Waiting {wait}s before retry {attempt + 2}/3...")
-                time.sleep(wait)
-            else:
-                raise
+    return json.loads(text)
 
 # ─── Send to Telegram ─────────────────────────────────────────────────────────
 def tg(method, payload):
