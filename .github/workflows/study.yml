@@ -3,6 +3,7 @@ name: Nursing Revision Bot
 on:
   repository_dispatch:
     types: [run_study_session]
+  workflow_dispatch:
 
 jobs:
   study:
