@@ -135,7 +135,7 @@ Rules:
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.4,
-                    thinking_config=types.ThinkingConfig(thinking_level="none")
+                    thinking_config=types.ThinkingConfig(thinking_level="disabled")
                 )
             )
             text = response.text.strip()
