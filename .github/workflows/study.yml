@@ -1,0 +1,42 @@
+name: Nursing Revision Bot
+
+on:
+  repository_dispatch:
+    types: [run_study_session]
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run study session
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python scripts/run.py
+
+      - name: Commit updated state
+        run: |
+          git config user.name "StudyBot"
+          git config user.email "studybot@users.noreply.github.com"
+          git add state.json
+          git diff --staged --quiet || git commit -m "chore: update state after study session [skip ci]"
+          git push
+
