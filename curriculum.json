@@ -1,0 +1,348 @@
+{
+  "meta": {
+    "total_topics": 27,
+    "target_date": "2025-09-30",
+    "notes": "Initial batch - 3 courses. Append more courses to the curriculum array as they become available."
+  },
+  "curriculum": [
+    {
+      "course_id": "GNS111",
+      "course_name": "Anatomy and Physiology I",
+      "priority": "high",
+      "group": "Sciences",
+      "units": [
+        {
+          "unit_id": "GNS111_U1",
+          "unit_number": 1,
+          "unit_name": "Introduction to Anatomy and Physiology",
+          "topics": [
+            {
+              "topic_id": "GNS111_U1_T1",
+              "order": 1,
+              "title": "Organization of the Human Body and Anatomical Positions",
+              "topic_type": "theory"
+            },
+            {
+              "topic_id": "GNS111_U1_T2",
+              "order": 2,
+              "title": "Body Cavities and Regions of the Body",
+              "topic_type": "theory"
+            },
+            {
+              "topic_id": "GNS111_U1_T3",
+              "order": 3,
+              "title": "The Cell: Theory, Properties and Cell Division",
+              "topic_type": "organ"
+            },
+            {
+              "topic_id": "GNS111_U1_T4",
+              "order": 4,
+              "title": "Introduction to Embryology and Human Genetics",
+              "topic_type": "theory"
+            },
+            {
+              "topic_id": "GNS111_U1_T5",
+              "order": 5,
+              "title": "Tissues and Membranes: Types, Characteristics and Special Adaptation",
+              "topic_type": "theory"
+            },
+            {
+              "topic_id": "GNS111_U1_T6",
+              "order": 6,
+              "title": "Organs, Systems, Adaptation and Homeostasis",
+              "topic_type": "concept"
+            }
+          ]
+        },
+        {
+          "unit_id": "GNS111_U2",
+          "unit_number": 2,
+          "unit_name": "Blood and Cardiovascular System",
+          "topics": [
+            {
+              "topic_id": "GNS111_U2_T1",
+              "order": 1,
+              "title": "Blood: Composition, Blood Groups and Clotting Mechanism",
+              "topic_type": "theory"
+            },
+            {
+              "topic_id": "GNS111_U2_T2",
+              "order": 2,
+              "title": "The Heart: Development, Structure and Functions",
+              "topic_type": "organ"
+            },
+            {
+              "topic_id": "GNS111_U2_T3",
+              "order": 3,
+              "title": "Blood Vessels: Arteries, Veins and Capillaries",
+              "topic_type": "organ"
+            },
+            {
+              "topic_id": "GNS111_U2_T4",
+              "order": 4,
+              "title": "Blood Circulation: Blood Pressure, Pulse and Types of Circulation",
+              "topic_type": "theory"
+            },
+            {
+              "topic_id": "GNS111_U2_T5",
+              "order": 5,
+              "title": "The Lymphatic System and Immune System",
+              "topic_type": "organ"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "course_id": "GNS112",
+      "course_name": "Foundation of Nursing I",
+      "priority": "high",
+      "group": "Professional",
+      "units": [
+        {
+          "unit_id": "GNS112_U1",
+          "unit_number": 1,
+          "unit_name": "Introduction to Nursing",
+          "topics": [
+            {
+              "topic_id": "GNS112_U1_T1",
+              "order": 1,
+              "title": "Definition of Nursing, History and Trends in Nursing",
+              "topic_type": "concept"
+            },
+            {
+              "topic_id": "GNS112_U1_T2",
+              "order": 2,
+              "title": "Concept of Health and Illness and Basic Human Needs",
+              "topic_type": "concept"
+            },
+            {
+              "topic_id": "GNS112_U1_T3",
+              "order": 3,
+              "title": "Professional Organizations, Health Maintenance Agencies and the Polyvalent Nurse",
+              "topic_type": "concept"
+            }
+          ]
+        },
+        {
+          "unit_id": "GNS112_U2",
+          "unit_number": 2,
+          "unit_name": "Health Care Institutions",
+          "topics": [
+            {
+              "topic_id": "GNS112_U2_T1",
+              "order": 1,
+              "title": "Hospital and Ward Organization and Structure of Health Facilities",
+              "topic_type": "concept"
+            },
+            {
+              "topic_id": "GNS112_U2_T2",
+              "order": 2,
+              "title": "Patient in Community and Institution: Admission, Referral and Discharge",
+              "topic_type": "procedure"
+            },
+            {
+              "topic_id": "GNS112_U2_T3",
+              "order": 3,
+              "title": "Principles and Techniques of Health Education and Role of the Nurse",
+              "topic_type": "concept"
+            }
+          ]
+        },
+        {
+          "unit_id": "GNS112_U3",
+          "unit_number": 3,
+          "unit_name": "Tools of Nursing",
+          "topics": [
+            {
+              "topic_id": "GNS112_U3_T1",
+              "order": 1,
+              "title": "Interpersonal Relationship, Communication Skills and Counselling",
+              "topic_type": "concept"
+            },
+            {
+              "topic_id": "GNS112_U3_T2",
+              "order": 2,
+              "title": "Reporting, Recording, Handover and Nursing Theories",
+              "topic_type": "concept"
+            }
+          ]
+        },
+        {
+          "unit_id": "GNS112_U4",
+          "unit_number": 4,
+          "unit_name": "Comfort and Safety Measures",
+          "topics": [
+            {
+              "topic_id": "GNS112_U4_T1",
+              "order": 1,
+              "title": "Care of Hospital Equipment and Bed Making",
+              "topic_type": "procedure"
+            },
+            {
+              "topic_id": "GNS112_U4_T2",
+              "order": 2,
+              "title": "Patient Positioning, Lifting, Safety Measures and Promoting Rest",
+              "topic_type": "procedure"
+            }
+          ]
+        },
+        {
+          "unit_id": "GNS112_U5",
+          "unit_number": 5,
+          "unit_name": "Basic Client/Patient Care",
+          "topics": [
+            {
+              "topic_id": "GNS112_U5_T1",
+              "order": 1,
+              "title": "Personal Hygiene: Bathing, Oral Care, Nail and Hair Care",
+              "topic_type": "procedure"
+            },
+            {
+              "topic_id": "GNS112_U5_T2",
+              "order": 2,
+              "title": "Pressure Sores: Causes, Prevention and Treatment",
+              "topic_type": "disease"
+            },
+            {
+              "topic_id": "GNS112_U5_T3",
+              "order": 3,
+              "title": "Oral Feeding, Elimination Care and Environmental Hygiene",
+              "topic_type": "procedure"
+            }
+          ]
+        },
+        {
+          "unit_id": "GNS112_U6",
+          "unit_number": 6,
+          "unit_name": "Diagnostic Measures",
+          "topics": [
+            {
+              "topic_id": "GNS112_U6_T1",
+              "order": 1,
+              "title": "General Patient Examination, Vital Signs and Anthropometric Measures",
+              "topic_type": "procedure"
+            },
+            {
+              "topic_id": "GNS112_U6_T2",
+              "order": 2,
+              "title": "Specimen Collection: Sputum, Vomitus, Urine and Stool",
+              "topic_type": "procedure"
+            }
+          ]
+        },
+        {
+          "unit_id": "GNS112_U7",
+          "unit_number": 7,
+          "unit_name": "First Aid",
+          "topics": [
+            {
+              "topic_id": "GNS112_U7_T1",
+              "order": 1,
+              "title": "Emergency Conditions: Asphyxia, Haemorrhage, Shock, Fractures and Poisoning",
+              "topic_type": "disease"
+            },
+            {
+              "topic_id": "GNS112_U7_T2",
+              "order": 2,
+              "title": "Principles and Priorities of Emergency Management and Casualty Transportation",
+              "topic_type": "procedure"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "course_id": "GNS113",
+      "course_name": "Introduction to Nursing Informatics",
+      "priority": "medium",
+      "group": "Professional",
+      "units": [
+        {
+          "unit_id": "GNS113_U1",
+          "unit_number": 1,
+          "unit_name": "Introduction to Nursing Informatics",
+          "topics": [
+            {
+              "topic_id": "GNS113_U1_T1",
+              "order": 1,
+              "title": "Definition, Concept, Types and Importance of Nursing Informatics",
+              "topic_type": "concept"
+            },
+            {
+              "topic_id": "GNS113_U1_T2",
+              "order": 2,
+              "title": "Computers in Nursing: Classification, Components and Software Applications",
+              "topic_type": "concept"
+            },
+            {
+              "topic_id": "GNS113_U1_T3",
+              "order": 3,
+              "title": "The Internet and Tele-Nursing",
+              "topic_type": "concept"
+            }
+          ]
+        },
+        {
+          "unit_id": "GNS113_U2",
+          "unit_number": 2,
+          "unit_name": "Nursing Information Management",
+          "topics": [
+            {
+              "topic_id": "GNS113_U2_T1",
+              "order": 1,
+              "title": "Electronic Health Records: Definition, Types and Data Access",
+              "topic_type": "concept"
+            },
+            {
+              "topic_id": "GNS113_U2_T2",
+              "order": 2,
+              "title": "Nursing Data Integration, Documentation, Quality and Security",
+              "topic_type": "concept"
+            }
+          ]
+        },
+        {
+          "unit_id": "GNS113_U3",
+          "unit_number": 3,
+          "unit_name": "ICT in Nursing Practice",
+          "topics": [
+            {
+              "topic_id": "GNS113_U3_T1",
+              "order": 1,
+              "title": "Technology Trends in Nursing: Mobile Health, Wearables and Human-Computer Interface",
+              "topic_type": "concept"
+            },
+            {
+              "topic_id": "GNS113_U3_T2",
+              "order": 2,
+              "title": "Electronic Communication and Tele-Health in Nursing",
+              "topic_type": "concept"
+            }
+          ]
+        },
+        {
+          "unit_id": "GNS113_U4",
+          "unit_number": 4,
+          "unit_name": "Monitoring and Care Devices",
+          "topics": [
+            {
+              "topic_id": "GNS113_U4_T1",
+              "order": 1,
+              "title": "Diagnostic and Monitoring Devices in Nursing Care",
+              "topic_type": "concept"
+            },
+            {
+              "topic_id": "GNS113_U4_T2",
+              "order": 2,
+              "title": "Direct and Indirect Nursing Care Technologies and Patient Assisted Devices",
+              "topic_type": "concept"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+
