@@ -1,17 +1,16 @@
 import os
 import json
+import time
 import requests
 from datetime import datetime, date
 
 # ─── Config from GitHub Secrets ───────────────────────────────────────────────
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID   = os.environ["TELEGRAM_CHAT_ID"]
-GEMINI_API_KEY     = os.environ["GEMINI_API_KEY"]
+GROQ_API_KEY       = os.environ["GROQ_API_KEY"]
 
-GEMINI_URL = (
-    f"https://generativelanguage.googleapis.com/v1beta/models/"
-    f"gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
-)
+GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "llama-3.3-70b-versatile"
 
 # ─── Load files ───────────────────────────────────────────────────────────────
 with open("curriculum.json", "r") as f:
@@ -125,24 +124,39 @@ Rules:
 - Output ONLY valid JSON. No markdown, no backticks, no extra text.
 """
 
-    body = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.4}
-    }
+    # Retry up to 3 times with backoff for rate limit errors
+    for attempt in range(3):
+        try:
+            headers = {
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            body = {
+                "model": GROQ_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.4
+            }
+            response = requests.post(GROQ_URL, headers=headers, json=body, timeout=60)
+            response.raise_for_status()
 
-    response = requests.post(GEMINI_URL, json=body, timeout=30)
-    response.raise_for_status()
-    raw = response.json()
-    text = raw["candidates"][0]["content"]["parts"][0]["text"].strip()
+            text = response.json()["choices"][0]["message"]["content"].strip()
 
-    # Strip markdown code fences if Gemini adds them
-    if text.startswith("```"):
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
-    text = text.strip()
+            # Strip markdown code fences if model adds them
+            if text.startswith("```"):
+                text = text.split("```")[1]
+                if text.startswith("json"):
+                    text = text[4:]
+            text = text.strip()
 
-    return json.loads(text)
+            return json.loads(text)
+
+        except Exception as e:
+            if "429" in str(e) and attempt < 2:
+                wait = 30 * (attempt + 1)
+                print(f"Rate limited. Waiting {wait}s before retry {attempt + 2}/3...")
+                time.sleep(wait)
+            else:
+                raise
 
 # ─── Send to Telegram ─────────────────────────────────────────────────────────
 def tg(method, payload):
