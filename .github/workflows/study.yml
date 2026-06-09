@@ -3,7 +3,6 @@ name: Nursing Revision Bot
 on:
   repository_dispatch:
     types: [run_study_session]
-  workflow_dispatch: 
 
 jobs:
   study:
@@ -24,7 +23,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install requests google-genai
+        run: pip install requests
 
       - name: Run study session
         env:
