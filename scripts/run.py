@@ -53,9 +53,8 @@ def get_next_topic():
 
         topic = topics[t_idx]
 
-        # Advance pointers for next run
+        # Advance topic pointer only — stay on same course until it's done
         state["topic_pointers"][unit_id] = t_idx + 1
-        state["course_pointer"] = (c_idx + 1) % total_courses
 
         return course, unit, topic
 
