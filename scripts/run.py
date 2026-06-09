@@ -121,6 +121,9 @@ Rules:
 - All 3 poll questions must be different aspects of the topic
 - Options must be plausible (not obviously wrong)
 - correct_index is 0 for A, 1 for B, 2 for C, 3 for D
+- Poll options must be SHORT — max 90 characters each (they appear as buttons)
+- Poll question must be max 280 characters
+- Explanation max 180 characters
 - Output ONLY valid JSON. No markdown, no backticks, no extra text.
 """
 
@@ -191,14 +194,14 @@ def send_lecture_note(course, unit, topic, content):
     })
 
 def send_poll_with_spoiler(poll, index):
-    options = poll["options"]
-    correct_letter = ["A", "B", "C", "D"][poll["correct_index"]]
-    explanation = poll["explanation"]
+    # Telegram poll options: max 100 chars each, question max 300 chars
+    question = poll["question"][:300]
+    options  = [opt[:100] for opt in poll["options"]]
+    explanation = poll["explanation"][:200]
 
-    # Send the poll
     tg("sendPoll", {
         "chat_id": TELEGRAM_CHAT_ID,
-        "question": f"Q{index}: {poll['question']}",
+        "question": f"Q{index}: {question}"[:300],
         "options": options,
         "type": "quiz",
         "correct_option_id": poll["correct_index"],
