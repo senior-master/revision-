@@ -75,55 +75,113 @@ def generate_content(course, unit, topic):
 
     structure = type_instructions.get(topic_type, type_instructions["concept"])
 
-    prompt = f"""You are an expert nursing tutor preparing study material for a nursing student 
-revising for the Final Qualifying Examination (FQE) in Nigeria.
+    prompt = f"""You are an expert Nigerian Nursing Tutor and Nursing & Midwifery Council CBT examiner.
+
+Your task is to generate concise, exam-focused revision material for a student preparing for the Final Qualifying Examination (FQE).
 
 Course: {course['course_name']}
 Unit: {unit['unit_name']}
 Topic: {topic['title']}
 Topic Type: {topic_type}
 
-Your task is to produce a JSON object with exactly this structure:
+The output MUST be a valid JSON object matching EXACTLY this schema:
 
 {{
   "lecture_note": {{
     "emoji": "<one relevant emoji>",
     "sections": [
-      {{"heading": "<section heading>", "content": "<clear, concise explanation>"}}
+      {{"heading": "<heading>", "content": "<content>"}}
     ]
   }},
   "polls": [
     {{
       "question": "<MCQ question>",
-      "options": ["<option A>", "<option B>", "<option C>", "<option D>"],
-      "correct_index": <0-3>,
-      "explanation": "<why the correct answer is right, and why others are wrong — 2-3 sentences>"
+      "options": ["<A>", "<B>", "<C>", "<D>"],
+      "correct_index": 0,
+      "explanation": "<brief explanation>"
     }},
     {{
       "question": "<MCQ question>",
-      "options": ["<option A>", "<option B>", "<option C>", "<option D>"],
-      "correct_index": <0-3>,
-      "explanation": "<explanation>"
+      "options": ["<A>", "<B>", "<C>", "<D>"],
+      "correct_index": 0,
+      "explanation": "<brief explanation>"
     }},
     {{
       "question": "<MCQ question>",
-      "options": ["<option A>", "<option B>", "<option C>", "<option D>"],
-      "correct_index": <0-3>,
-      "explanation": "<explanation>"
+      "options": ["<A>", "<B>", "<C>", "<D>"],
+      "correct_index": 0,
+      "explanation": "<brief explanation>"
     }}
-  ]
+  ],
+  "exam_trap": {{
+    "mistake": "<common mistake students make on this topic>",
+    "correction": "<the correct understanding>"
+  }}
 }}
 
-Rules:
-- Lecture note sections must follow this structure for a {topic_type}: {structure}
-- Keep each section content concise but complete (3-6 sentences max)
-- All 3 poll questions must be different aspects of the topic
-- Options must be plausible (not obviously wrong)
-- correct_index is 0 for A, 1 for B, 2 for C, 3 for D
-- Poll options must be SHORT — max 90 characters each (they appear as buttons)
-- Poll question must be max 280 characters
-- Explanation max 180 characters
-- Output ONLY valid JSON. No markdown, no backticks, no extra text.
+========================
+LECTURE NOTE RULES
+
+Do NOT use fixed headings. Choose the most appropriate headings for the topic type. you are free to add yours if applicable.
+
+Expected emphasis for topic type "{topic_type}":
+{structure}
+
+Typical heading examples by type:
+- Disease: Overview, Causes/Risk Factors, Pathophysiology, Clinical Manifestations, Diagnosis, Treatment, Nursing Management, Prevention
+- Drug: Drug Class, Mechanism of Action, Indications, Adverse Effects, Contraindications, Nursing Responsibilities, Patient Education
+- Procedure: Purpose, Indications, Preparation, Steps, Complications, Nursing Responsibilities
+- Organ: Overview, Structure, Functions, Clinical Relevance
+- Theory: Overview, Key Concepts, Components/Stages, Relevance to Nursing
+- Concept: Overview, Principles, Classification, Importance, Nursing Relevance
+
+Use only headings/subheadings actually needed. You may use different headings if more appropriate.
+
+Each section:
+- 2-5 concise sentences
+- High-yield exam facts only
+- No motivational language, no filler
+
+Prioritize: definitions, classifications, functions, causes, risk factors, signs/symptoms,
+nursing responsibilities, nursing priorities, prevention, complications, patient education,
+emergency management, clinical decision-making.
+
+========================
+MCQ RULES — 3 questions at different difficulty levels:
+
+Q1: Direct recall of a high-yield fact
+Q2: Application — short nursing/patient/community scenario
+Q3: Higher-order — prioritization, nursing judgment, best action, complication recognition
+
+Do NOT produce three recall questions.
+
+========================
+DISTRACTOR RULES
+
+- Incorrect options must be plausible, same subject area
+- No obviously wrong answers
+- Correct answer should not be predictable by length or wording
+- Randomize correct answer position across the 3 questions
+
+========================
+LIMITS
+
+- Question: max 280 characters
+- Each option: max 90 characters
+- Explanation: max 180 characters
+- correct_index: 0=A, 1=B, 2=C, 3=D
+
+========================
+EXAM TRAP RULES
+
+- mistake: one common misconception or error students make about this topic in exams
+- correction: the accurate understanding in one clear sentence
+- This should be the single most exam-relevant trap for this topic
+
+========================
+OUTPUT RULES
+
+Return ONLY valid JSON. No markdown, no code fences, no comments, no text outside the JSON.
 """
 
     # Retry up to 3 times with backoff for rate limit errors
@@ -150,8 +208,17 @@ Rules:
                     text = text[4:]
             text = text.strip()
 
-            return json.loads(text)
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError as je:
+                print(f"JSON parse error: {je}\nRaw text: {text[:300]}")
+                if attempt < 2:
+                    time.sleep(10)
+                    continue
+                raise
 
+        except json.JSONDecodeError:
+            raise
         except Exception as e:
             if "429" in str(e) and attempt < 2:
                 wait = 30 * (attempt + 1)
@@ -167,19 +234,33 @@ def tg(method, payload):
     r.raise_for_status()
     return r.json()
 
+def escape_md(text):
+    """Escape special Markdown v1 characters to prevent Telegram parse errors."""
+    for ch in ['_', '*', '`', '[']:
+        text = text.replace(ch, f"\\{ch}")
+    return text
+
 def send_lecture_note(course, unit, topic, content):
     note = content["lecture_note"]
+    trap = content.get("exam_trap")
     lines = []
 
     # Header
     lines.append(f"{note['emoji']} *{topic['title'].upper()}*")
-    lines.append(f"📘 _{course['course_name']}_  •  _{unit['unit_name']}_")
+    lines.append(f"📘 _{escape_md(course['course_name'])}_  •  _{escape_md(unit['unit_name'])}_")
     lines.append("━━━━━━━━━━━━━━━━━━━━")
 
     # Sections
     for section in note["sections"]:
-        lines.append(f"\n*{section['heading']}*")
-        lines.append(section["content"])
+        lines.append(f"\n*{escape_md(section['heading'])}*")
+        lines.append(escape_md(section["content"]))
+
+    # Exam trap
+    if trap:
+        lines.append("\n━━━━━━━━━━━━━━━━━━━━")
+        lines.append("⚠️ *COMMON CONFUSION*")
+        lines.append(f"❌ {escape_md(trap['mistake'])}")
+        lines.append(f"✅ {escape_md(trap['correction'])}")
 
     lines.append("\n━━━━━━━━━━━━━━━━━━━━")
     lines.append("🧠 *Test yourself — 3 questions below\\!*")
