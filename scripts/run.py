@@ -34,7 +34,6 @@ def get_next_topic():
 
         u_idx = state["unit_pointers"].get(course_id, 0)
         if u_idx >= len(units):
-            # Course fully done, move to next
             state["course_pointer"] = (c_idx + 1) % total_courses
             attempts += 1
             continue
@@ -45,46 +44,76 @@ def get_next_topic():
 
         t_idx = state["topic_pointers"].get(unit_id, 0)
         if t_idx >= len(topics):
-            # Unit done, move to next unit
             state["unit_pointers"][course_id] = u_idx + 1
             state["topic_pointers"][unit_id] = 0
             attempts += 1
             continue
 
         topic = topics[t_idx]
-
-        # Advance topic pointer only — stay on same course until it's done
         state["topic_pointers"][unit_id] = t_idx + 1
 
         return course, unit, topic
 
-    return None, None, None  # All topics exhausted
+    return None, None, None
 
-# ─── Generate content with Gemini ─────────────────────────────────────────────
+# ─── Generate content with Groq ───────────────────────────────────────────────
 def generate_content(course, unit, topic):
-    topic_type = topic["topic_type"]
+    topic_type = topic.get("topic_type", "concept")
 
-    type_instructions = {
-        "disease":   "Definition, Causes, Signs & Symptoms, Pathophysiology, Treatment, Nursing Interventions",
-        "drug":      "Drug Class, Mechanism of Action, Indications, Side Effects, Nursing Considerations, Dosage Notes",
-        "organ":     "Definition/Overview, Structure, Functions, Clinical Relevance for Nurses",
-        "procedure": "Definition, Indications/Purpose, Step-by-step Process, Nursing Role, Possible Complications",
-        "theory":    "Definition, Key Concepts, Explanation, Clinical/Nursing Relevance",
-        "concept":   "Definition, Key Points, Practical Examples, Nursing Application",
+    # Guidance per type — Groq uses these as suggestions, not strict rules
+    type_guidance = {
+        "disease":   "Overview, Causes/Risk Factors, Pathophysiology, Clinical Manifestations, Diagnosis, Treatment, Nursing Management, Prevention, Complications",
+        "drug":      "Drug Class, Mechanism of Action, Indications, Adverse Effects, Contraindications, Nursing Responsibilities, Patient Education, Dosage Notes",
+        "organ":     "Overview, Structure, Anatomy, Functions, Physiology, Clinical Relevance, Nursing Considerations",
+        "procedure": "Purpose/Indications, Equipment Needed, Preparation, Steps, Post-procedure Care, Complications, Nursing Responsibilities",
+        "theory":    "Overview, Author/Origin, Key Concepts, Components/Stages/Principles, Application to Nursing Practice, Limitations",
+        "concept":   "Definition, Key Principles, Classification/Types, Importance, Nursing Relevance, Clinical Application",
+        "physiology":"Overview, Mechanism/Process, Regulatory Factors, Clinical Significance, Nursing Implications",
+        "diagnostic":"Purpose, Principle, Procedure, Normal Values/Findings, Abnormal Findings, Nursing Responsibilities",
+        "diagnostic_tool": "Overview, Principle, Indications, Procedure, Findings Interpretation, Nursing Responsibilities",
+        "equipment": "Definition/Overview, Components, Indications, How to Use, Safety Considerations, Nursing Responsibilities",
+        "drug_class": "Overview, Mechanism of Action, Examples, Indications, Adverse Effects, Nursing Considerations",
+        "healthcare_system": "Definition, Structure, Functions, Key Components, Nursing Role, Challenges",
+        "communication_counselling": "Definition, Principles, Types/Techniques, Barriers, Nursing Application, Therapeutic Use",
+        "academic_professional_skill": "Definition, Importance, Key Components, Steps/Process, Nursing Application",
     }
 
-    structure = type_instructions.get(topic_type, type_instructions["concept"])
+    guidance = type_guidance.get(topic_type, type_guidance["concept"])
 
-    prompt = f"""You are an expert Nigerian Nursing Tutor and Nursing & Midwifery Council CBT examiner.
+    # Build path string for context
+    path_raw = topic.get("path", topic.get("context", ""))
+    if isinstance(path_raw, list):
+        path_str = " > ".join(path_raw)
+    else:
+        path_str = str(path_raw) if path_raw else ""
 
-Your task is to generate concise, exam-focused revision material for a student preparing for the Final Qualifying Examination (FQE).
+    # Build coverage string
+    coverage_raw = topic.get("coverage", [])
+    if isinstance(coverage_raw, list) and coverage_raw:
+        coverage_str = "\n".join(f"  - {item}" for item in coverage_raw)
+    elif isinstance(coverage_raw, str) and coverage_raw:
+        coverage_str = coverage_raw
+    else:
+        coverage_str = ""
 
-Course: {course['course_name']}
-Unit: {unit['unit_name']}
-Topic: {topic['title']}
-Topic Type: {topic_type}
+    # Compose context block
+    context_block = f"Course: {course['course_name']}\nUnit: {unit['unit_name']}\nTopic: {topic['title']}"
+    if path_str:
+        context_block += f"\nCurriculum Path: {path_str}"
+    if coverage_str:
+        context_block += f"\nTopics to Cover:\n{coverage_str}"
 
-The output MUST be a valid JSON object matching EXACTLY this schema:
+    prompt = f"""You are an expert Nigerian Nursing Tutor and Nursing & Midwifery Council (NMC) CBT examiner.
+
+Your task is to generate detailed, exam-focused revision material for a student preparing for the Final Qualifying Examination (FQE).
+
+{context_block}
+Suggested Topic Type: {topic_type}
+
+════════════════════════════════
+OUTPUT SCHEMA
+
+Return ONLY this JSON object — no markdown, no code fences, no text outside JSON:
 
 {{
   "lecture_note": {{
@@ -103,88 +132,84 @@ The output MUST be a valid JSON object matching EXACTLY this schema:
     {{
       "question": "<MCQ question>",
       "options": ["<A>", "<B>", "<C>", "<D>"],
-      "correct_index": 0,
+      "correct_index": 1,
       "explanation": "<brief explanation>"
     }},
     {{
       "question": "<MCQ question>",
       "options": ["<A>", "<B>", "<C>", "<D>"],
-      "correct_index": 0,
+      "correct_index": 2,
       "explanation": "<brief explanation>"
     }}
   ],
   "exam_trap": {{
-    "mistake": "<common mistake students make on this topic>",
-    "correction": "<the correct understanding>"
+    "mistake": "<single most common student mistake on this topic>",
+    "correction": "<accurate correction in one clear sentence>"
   }}
 }}
 
-========================
+════════════════════════════════
 LECTURE NOTE RULES
 
-Do NOT use fixed headings. Choose the most appropriate headings for the topic type. you are free to add yours if applicable.
+The "Suggested Topic Type" is GUIDANCE ONLY.
+If the topic does not fit the suggested type, use your judgment and generate the most appropriate headings.
+You are a tutor — structure the note the way a knowledgeable nurse would teach it.
 
-Expected emphasis for topic type "{topic_type}":
-{structure}
+Suggested heading structure for type "{topic_type}":
+{guidance}
 
-Typical heading examples by type:
-- Disease: Overview, Causes/Risk Factors, Pathophysiology, Clinical Manifestations, Diagnosis, Treatment, Nursing Management, Prevention
-- Drug: Drug Class, Mechanism of Action, Indications, Adverse Effects, Contraindications, Nursing Responsibilities, Patient Education
-- Procedure: Purpose, Indications, Preparation, Steps, Complications, Nursing Responsibilities
-- Organ: Overview, Structure, Functions, Clinical Relevance
-- Theory: Overview, Key Concepts, Components/Stages, Relevance to Nursing
-- Concept: Overview, Principles, Classification, Importance, Nursing Relevance
+General rules:
+- The suggested headings for your topic type are a CHECKLIST, not a template
+- For EACH suggested heading, ask yourself: "Does this heading actually apply to this specific topic?"
+- If YES → include it
+- If NO → discard it completely, do not force it
+- If a heading would be empty or irrelevant for this topic, skip it
+- If an important heading is missing from the suggestions, add it yourself
+- The final note must feel naturally structured for THIS topic, not copy-pasted from a template
+- Each section: 3-6 concise sentences of high-yield exam content
+- No filler, no motivational language, no repetition
+- If "Topics to Cover" is provided above, ensure EVERY item listed is addressed somewhere in the note
+- If the curriculum path is provided, use it to understand the topic's context and scope
 
-Use only headings/subheadings actually needed. You may use different headings if more appropriate.
+Priority content for FQE:
+Definitions • Classifications • Pathophysiology • Functions • Causes • Risk factors •
+Signs & symptoms • Nursing responsibilities • Nursing priorities • Complications •
+Prevention • Patient education • Emergency management • Clinical decision-making •
+Normal vs abnormal values • Drug calculations • Legal/ethical implications
 
-Each section:
-- 2-5 concise sentences
-- High-yield exam facts only
-- No motivational language, no filler
+════════════════════════════════
+MCQ RULES
 
-Prioritize: definitions, classifications, functions, causes, risk factors, signs/symptoms,
-nursing responsibilities, nursing priorities, prevention, complications, patient education,
-emergency management, clinical decision-making.
+Exactly 3 questions — strictly different difficulty levels:
 
-========================
-MCQ RULES — 3 questions at different difficulty levels:
+Q1 — Direct recall: test a key definition, classification, or fact
+Q2 — Application: short nursing/patient/community scenario requiring knowledge application  
+Q3 — Higher-order: prioritization, nursing judgment, best action, or complication recognition
 
-Q1: Direct recall of a high-yield fact
-Q2: Application — short nursing/patient/community scenario
-Q3: Higher-order — prioritization, nursing judgment, best action, complication recognition
-
-Do NOT produce three recall questions.
-
-========================
+════════════════════════════════
 DISTRACTOR RULES
 
-- Incorrect options must be plausible, same subject area
-- No obviously wrong answers
-- Correct answer should not be predictable by length or wording
-- Randomize correct answer position across the 3 questions
+- All 4 options must belong to the same subject area
+- Incorrect options must be plausible — a student who has not studied could easily pick them
+- Do NOT use obviously wrong options
+- Correct answer position must vary across Q1, Q2, Q3 (do not always put it at index 0)
+- Correct answer should not stand out by length or phrasing
 
-========================
-LIMITS
+════════════════════════════════
+CHARACTER LIMITS
 
-- Question: max 280 characters
-- Each option: max 90 characters
-- Explanation: max 180 characters
-- correct_index: 0=A, 1=B, 2=C, 3=D
+Question: max 280 characters
+Each option: max 90 characters
+Explanation: max 180 characters
 
-========================
-EXAM TRAP RULES
+════════════════════════════════
+EXAM TRAP
 
-- mistake: one common misconception or error students make about this topic in exams
-- correction: the accurate understanding in one clear sentence
-- This should be the single most exam-relevant trap for this topic
-
-========================
-OUTPUT RULES
-
-Return ONLY valid JSON. No markdown, no code fences, no comments, no text outside the JSON.
+The single most likely mistake a student makes on this topic in a CBT exam.
+State the mistake clearly. Then give the accurate correction.
+This is often more memorable than an extra paragraph of notes.
 """
 
-    # Retry up to 3 times with backoff for rate limit errors
     for attempt in range(3):
         try:
             headers = {
@@ -201,7 +226,6 @@ Return ONLY valid JSON. No markdown, no code fences, no comments, no text outsid
 
             text = response.json()["choices"][0]["message"]["content"].strip()
 
-            # Strip markdown code fences if model adds them
             if text.startswith("```"):
                 text = text.split("```")[1]
                 if text.startswith("json"):
@@ -211,7 +235,7 @@ Return ONLY valid JSON. No markdown, no code fences, no comments, no text outsid
             try:
                 return json.loads(text)
             except json.JSONDecodeError as je:
-                print(f"JSON parse error: {je}\nRaw text: {text[:300]}")
+                print(f"JSON parse error on attempt {attempt+1}: {je}\nRaw: {text[:400]}")
                 if attempt < 2:
                     time.sleep(10)
                     continue
@@ -222,12 +246,12 @@ Return ONLY valid JSON. No markdown, no code fences, no comments, no text outsid
         except Exception as e:
             if "429" in str(e) and attempt < 2:
                 wait = 30 * (attempt + 1)
-                print(f"Rate limited. Waiting {wait}s before retry {attempt + 2}/3...")
+                print(f"Rate limited. Waiting {wait}s before retry {attempt+2}/3...")
                 time.sleep(wait)
             else:
                 raise
 
-# ─── Send to Telegram ─────────────────────────────────────────────────────────
+# ─── Telegram helpers ─────────────────────────────────────────────────────────
 def tg(method, payload):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/{method}"
     r = requests.post(url, json=payload, timeout=15)
@@ -235,7 +259,7 @@ def tg(method, payload):
     return r.json()
 
 def escape_md(text):
-    """Escape special Markdown v1 characters to prevent Telegram parse errors."""
+    """Escape Markdown v1 special chars for Telegram."""
     for ch in ['_', '*', '`', '[']:
         text = text.replace(ch, f"\\{ch}")
     return text
@@ -246,7 +270,7 @@ def send_lecture_note(course, unit, topic, content):
     lines = []
 
     # Header
-    lines.append(f"{note['emoji']} *{topic['title'].upper()}*")
+    lines.append(f"{note['emoji']} *{escape_md(topic['title'].upper())}*")
     lines.append(f"📘 _{escape_md(course['course_name'])}_  •  _{escape_md(unit['unit_name'])}_")
     lines.append("━━━━━━━━━━━━━━━━━━━━")
 
@@ -258,7 +282,7 @@ def send_lecture_note(course, unit, topic, content):
     # Exam trap
     if trap:
         lines.append("\n━━━━━━━━━━━━━━━━━━━━")
-        lines.append("⚠️ *COMMON CONFUSION*")
+        lines.append("⚠️ *COMMON*")
         lines.append(f"❌ {escape_md(trap['mistake'])}")
         lines.append(f"✅ {escape_md(trap['correction'])}")
 
@@ -274,10 +298,9 @@ def send_lecture_note(course, unit, topic, content):
     })
 
 def send_poll_with_spoiler(poll, index):
-    # Telegram poll options: max 100 chars each, question max 300 chars
-    question = poll["question"][:300]
-    options  = [opt[:100] for opt in poll["options"]]
-    explanation = poll["explanation"][:200]
+    question   = poll["question"][:280]
+    options    = [opt[:90] for opt in poll["options"]]
+    explanation = poll["explanation"][:180]
 
     tg("sendPoll", {
         "chat_id": TELEGRAM_CHAT_ID,
@@ -289,26 +312,7 @@ def send_poll_with_spoiler(poll, index):
         "is_anonymous": False
     })
 
-def send_progress_footer(course, unit, topic):
-    total_topics = curriculum_data["meta"]["total_topics"]
-    done = state["total_sent"]
-    percent = round((done / total_topics) * 100, 1) if total_topics > 0 else 0
-
-    target = date(2025, 9, 30)
-    days_left = (target - date.today()).days
-
-    msg = (
-        f"\n📊 *Progress*: {done}/{total_topics} topics ({percent}%)\n"
-        f"📅 *Days left until Sep 30*: {days_left}\n"
-        f"✅ Keep going — you've got this\\! 💪"
-    )
-    tg("sendMessage", {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": msg,
-        "parse_mode": "Markdown"
-    })
-
-# ─── Save state back to file ──────────────────────────────────────────────────
+# ─── Save state ───────────────────────────────────────────────────────────────
 def save_state():
     state["last_run"] = datetime.utcnow().isoformat()
     with open("state.json", "w") as f:
@@ -326,7 +330,7 @@ def main():
         })
         return
 
-    print(f"Generating: [{course['course_id']}] {topic['title']}")
+    print(f"[{course['course_id']}] {unit['unit_name']} > {topic['title']}")
 
     content = generate_content(course, unit, topic)
 
@@ -338,9 +342,7 @@ def main():
     state["total_sent"] = state.get("total_sent", 0) + 1
     state["completed_topics"].append(topic["topic_id"])
 
-    send_progress_footer(course, unit, topic)
     save_state()
-
     print(f"Done. Total sent: {state['total_sent']}")
 
 if __name__ == "__main__":
