@@ -69,7 +69,7 @@ def generate_content(course, unit, topic):
         "equipment": "may need: Definition/Overview, Components (parts clearly listed), Indications (when used), How to Use (stepwise operational guide), Safety Considerations, Nursing Responsibilities (maintenance + patient safety).",
         "drug_class": "may need: Overview, Mechanism of Action (shared class mechanism), Examples (common drugs), Indications, Adverse Effects (class effects), Nursing Considerations (monitoring patterns + safety rules).",
         "healthcare_system": " may need: Definition, Structure (levels clearly separated), Functions, Key Components, Nursing Role (system-level responsibilities), Challenges (real-world constraints).",
-        "communication_counselling": fmay need: Definition, Principles, Types/Techniques (clearly separated), Barriers, Nursing Application (clinical scenarios), Therapeutic Use (patient outcomes + practice relevance).",
+        "communication_counselling": "may need: Definition, Principles, Types/Techniques (clearly separated), Barriers, Nursing Application (clinical scenarios), Therapeutic Use (patient outcomes + practice relevance).",
         "academic_professional_skill": "may need: Definition, Importance, Key Components, Steps/Process (actionable sequence), Nursing Application (how it is used in practice).",
     }
     
