@@ -255,7 +255,9 @@ This is often more memorable than an extra paragraph of notes.
 def tg(method, payload):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/{method}"
     r = requests.post(url, json=payload, timeout=15)
-    r.raise_for_status()
+    if not r.ok:
+        print(f"Telegram error [{method}]: {r.status_code} — {r.text}")
+        r.raise_for_status()
     return r.json()
 
 def escape_md(text):
@@ -282,7 +284,7 @@ def send_lecture_note(course, unit, topic, content):
     # Exam trap
     if trap:
         lines.append("\n━━━━━━━━━━━━━━━━━━━━")
-        lines.append("⚠️ *COMMON*")
+        lines.append("⚠️ *COMMON EXAM TRAP*")
         lines.append(f"❌ {escape_md(trap['mistake'])}")
         lines.append(f"✅ {escape_md(trap['correction'])}")
 
