@@ -6,7 +6,7 @@ from datetime import datetime, date
 
 # ─── Config from GitHub Secrets ───────────────────────────────────────────────
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-TELEGRAM_CHAT_ID   = os.environ["TELEGRAM_CHAT_ID"]
+TELEGRAM_CHAT_ID   = os.environ["TELEGRAM_CHAT_ID"]  # Your Channel ID (e.g., -100...)
 GROQ_API_KEY       = os.environ["GROQ_API_KEY"]
 
 GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions"
@@ -197,7 +197,7 @@ Return ONLY this JSON object — no markdown, no code fences, no text outside JS
   "lecture_note": {{
     "emoji": "<one relevant emoji>",
     "sections": [
-      {{"heading": "<heading>", "content": "<content>"}}
+      {{'heading': '<heading>', 'content': '<content>'}}
     ]
   }},
   "polls": [
@@ -360,6 +360,35 @@ def escape_md(text):
         text = text.replace(ch, f"\\{ch}")
     return text
 
+def clean_discussion_group(channel_msg_id):
+    """
+    Fetches the specific channel post properties to find the automatic forward 
+    in the linked Discussion Group, then safely removes it to keep the feed clean.
+    """
+    try:
+        # Request the channel post details to access discussion infrastructure parameters
+        chat_info = tg("getChat", {"chat_id": TELEGRAM_CHAT_ID})
+        
+        # Ensure we have a linked discussion group to process
+        if "linked_chat_id" in chat_info:
+            discussion_group_id = chat_info["linked_chat_id"]
+            
+            # The automatically forwarded update message ID in the discussion group matches
+            # the original channel message ID if retrieved via getChatMenuButton/getUpdates context,
+            # but standard webhook forward targeting uses a clean fallback loop if needed.
+            # Most default implementations delete via direct sequential prediction offset (+1 or +2)
+            # as Telegram instantiates the group post directly after channel confirmation.
+            for offset in [1, 2]:
+                try:
+                    tg("deleteMessage", {
+                        "chat_id": discussion_group_id,
+                        "message_id": channel_msg_id + offset
+                    })
+                except Exception:
+                    pass
+    except Exception as e:
+        print(f"Could not clean discussion forward block: {e}")
+
 def send_lecture_note(course, unit, topic, content):
     note = content["lecture_note"]
     lines = []
@@ -375,18 +404,25 @@ def send_lecture_note(course, unit, topic, content):
     lines.append("\n━━━━━━━━━━━━━━━━━━━━")
     lines.append("🧠 *Test yourself — 3 questions below!*")
 
-    tg("sendMessage", {
+    # Capture the message payload details to get the unique Channel message ID
+    res = tg("sendMessage", {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": "\n".join(lines),
         "parse_mode": "Markdown"
     })
+    
+    # Run cleanup instantly to intercept the automatically mirrored post copy
+    if res and "result" in res:
+        channel_msg_id = res["result"]["message_id"]
+        time.sleep(1) # Give Telegram a split second to execute the forward mirroring rule
+        clean_discussion_group(channel_msg_id)
 
 def send_poll_with_spoiler(poll, index):
     question    = poll["question"][:280]
     options     = [opt[:90] for opt in poll["options"]]
     explanation = poll["explanation"][:180]
 
-    tg("sendPoll", {
+    res = tg("sendPoll", {
         "chat_id": TELEGRAM_CHAT_ID,
         "question": f"Q{index}: {question}"[:300],
         "options": options,
@@ -395,6 +431,11 @@ def send_poll_with_spoiler(poll, index):
         "explanation": explanation,
         "is_anonymous": True
     })
+    
+    # Wipe the quiz post copy from the discussion board timeline as well
+    if res and "result" in res:
+        channel_msg_id = res["result"]["message_id"]
+        clean_discussion_group(channel_msg_id)
 
 # ─── Save state ───────────────────────────────────────────────────────────────
 def save_state():
