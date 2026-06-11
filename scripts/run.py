@@ -311,7 +311,7 @@ def send_poll_with_spoiler(poll, index):
         "type": "quiz",
         "correct_option_id": poll["correct_index"],
         "explanation": explanation,
-        "is_anonymous": False
+        "is_anonymous": True
     })
 
 # ─── Save state ───────────────────────────────────────────────────────────────
