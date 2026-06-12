@@ -14,80 +14,42 @@ GROQ_MODEL = "llama-3.3-70b-versatile"
 
 # ─── Topic type normalizer — maps all types down to 10 ────────────────────────
 TYPE_MAP = {
-    # disease group
-    "disease":          "disease",
-    "condition":        "disease",
-    "disease_group":    "disease",
-    "condition_group":  "disease",
-    "complication":     "disease",
-    "pathophysiology":  "disease",
-    "cause":            "disease",
-    "harmful_practice": "disease",
-    # procedure group
-    "procedure":          "procedure",
-    "process":            "procedure",
-    "method":             "procedure",
-    "practice":           "procedure",
-    "control":            "procedure",
-    "rehabilitation":     "procedure",
-    "emergency":          "procedure",
-    "management":         "procedure",
-    "nursing_management": "procedure",
-    "prevention":         "procedure",
-    "assessment":         "procedure",
-    # concept group
-    "concept":                    "concept",
-    "theory":                     "concept",
-    "history":                    "concept",
-    "legal":                      "concept",
-    "ethics":                     "concept",
-    "comparison":                 "concept",
-    "classification":             "concept",
-    "need":                       "concept",
-    "role":                       "concept",
-    "service":                    "concept",
-    "social_issue":               "concept",
-    "policy":                     "concept",
-    "system":                     "concept",
-    "facility":                   "concept",
-    "healthcare_system":          "concept",
-    "academic_professional_skill":"concept",
-    "communication_counselling":  "concept",
-    "skill":                      "concept",
-    "tool":                       "concept",
-    "technology":                 "concept",
-    "instrument":                 "concept",
-    "diet":                       "concept",
-    "design":                     "concept",
-    "special_group":              "concept",
-    # organ group
-    "organ":   "organ",
-    "anatomy": "organ",
-    # physiology group
-    "physiology":            "physiology",
-    "physiological_process": "physiology",
-    # drug group
-    "drug":       "drug",
-    "drug_class": "drug_class",
-    # diagnostic group
-    "diagnostic":      "diagnostic",
-    "diagnostic_tool": "diagnostic_tool",
-    # equipment
+    "disease": "disease", "condition": "disease", "disease_group": "disease",
+    "condition_group": "disease", "complication": "disease",
+    "pathophysiology": "disease", "cause": "disease", "harmful_practice": "disease",
+    "procedure": "procedure", "process": "procedure", "method": "procedure",
+    "practice": "procedure", "control": "procedure", "rehabilitation": "procedure",
+    "emergency": "procedure", "management": "procedure",
+    "nursing_management": "procedure", "prevention": "procedure",
+    "assessment": "procedure",
+    "concept": "concept", "theory": "concept", "history": "concept",
+    "legal": "concept", "ethics": "concept", "comparison": "concept",
+    "classification": "concept", "need": "concept", "role": "concept",
+    "service": "concept", "social_issue": "concept", "policy": "concept",
+    "system": "concept", "facility": "concept", "healthcare_system": "concept",
+    "academic_professional_skill": "concept", "communication_counselling": "concept",
+    "skill": "concept", "tool": "concept", "technology": "concept",
+    "instrument": "concept", "diet": "concept", "design": "concept",
+    "special_group": "concept",
+    "organ": "organ", "anatomy": "organ",
+    "physiology": "physiology", "physiological_process": "physiology",
+    "drug": "drug", "drug_class": "drug_class",
+    "diagnostic": "diagnostic", "diagnostic_tool": "diagnostic_tool",
     "equipment": "equipment",
 }
 
-# ─── Type guidance for the 10 normalized types ────────────────────────────────
-TYPE_GUIDANCE = {
-    "disease":        "may need: Overview, Causes/Risk Factors, Pathophysiology (stepwise mechanism), Clinical Manifestations (early vs late), Diagnosis (labs + clinical criteria), Treatment (medical + surgical), Nursing Management (prioritized interventions + rationales), Prevention (primary/secondary/tertiary), Complications (acute vs chronic).",
-    "drug":           "may need: Drug Class, Mechanism of Action (stepwise receptor/biochemical effect), Indications (primary + off-label), Adverse Effects (common vs severe), Contraindications, Nursing Responsibilities (before/during/after), Patient Education, Dosage Notes.",
-    "drug_class":     "may need: Overview, Shared Mechanism of Action, Key Examples, Indications, Class Adverse Effects, Contraindications, Nursing Considerations (monitoring + safety patterns).",
-    "organ":          "may need: Overview, Gross Structure, Microscopic Anatomy, Functions (physiological roles), Physiology (how it works), Clinical Relevance (disease states), Nursing Considerations (assessment + monitoring).",
-    "physiology":     "may need: Overview, Step-by-step Mechanism/Process, Regulatory Factors (hormonal/neural/chemical), Clinical Significance (what abnormalities mean), Nursing Implications (assessment + intervention).",
-    "procedure":      "may need: Purpose/Indications, Equipment Needed, Patient Preparation, Steps (sequential + clear), Post-procedure Care, Complications (signs + management), Nursing Responsibilities.",
-    "diagnostic":     "may need: Purpose, Principle, Procedure (stepwise), Normal Values/Findings, Abnormal Findings (clinical meaning), Nursing Responsibilities (before/during/after).",
-    "diagnostic_tool":"may need: Overview, Principle (how it works), Indications, Procedure (stepwise), Findings Interpretation (normal vs abnormal), Nursing Responsibilities (safety + preparation + monitoring).",
-    "equipment":      "may need: Definition/Overview, Components, Indications, How to Use (stepwise), Safety Considerations, Nursing Responsibilities (maintenance + patient safety).",
-    "concept":        "may need: Definition (precise), Principles, Classification/Types, Importance, Nursing Relevance, Clinical Application, Legal/Ethical Implications if applicable.",
+# ─── Type context hints (NOT heading templates — just thinking guidance) ───────
+TYPE_HINTS = {
+    "disease":        "This is a disease/condition. Key examinable areas typically include: aetiology, pathophysiology, clinical features, diagnosis, medical/nursing management, complications, prevention.",
+    "drug":           "This is a specific drug. Key examinable areas typically include: drug class, mechanism of action, indications, adverse effects, contraindications, nursing responsibilities, patient education.",
+    "drug_class":     "This is a drug class/group. Key examinable areas typically include: shared mechanism, class examples, indications, class adverse effects, nursing monitoring patterns.",
+    "organ":          "This is an organ or anatomical structure. Key examinable areas typically include: structure, location, functions, physiological roles, clinical relevance, nursing assessment focus.",
+    "physiology":     "This is a physiological process. Key examinable areas typically include: step-by-step mechanism, regulatory factors, normal values, clinical significance of abnormalities, nursing implications.",
+    "procedure":      "This is a nursing/clinical procedure or process. Key examinable areas typically include: purpose, indications, equipment, preparation, steps, post-procedure care, complications, nursing responsibilities.",
+    "diagnostic":     "This is a diagnostic test or investigation. Key examinable areas typically include: purpose, principle, normal values, abnormal findings and their meaning, nursing responsibilities before/during/after.",
+    "diagnostic_tool":"This is a diagnostic device or tool. Key examinable areas typically include: principle of operation, indications, how to use, findings interpretation, nursing responsibilities.",
+    "equipment":      "This is clinical equipment. Key examinable areas typically include: components, indications, correct usage, safety considerations, nursing responsibilities.",
+    "concept":        "This is a concept, theory, principle, or professional topic. Key examinable areas typically include: definition, principles, classification, importance, nursing application, clinical or legal relevance.",
 }
 
 # ─── Load files ───────────────────────────────────────────────────────────────
@@ -146,7 +108,7 @@ def build_path(course, unit, topic):
 def generate_content(course, unit, topic):
     raw_type   = topic.get("topic_type", "concept")
     topic_type = TYPE_MAP.get(raw_type, "concept")
-    guidance   = TYPE_GUIDANCE.get(topic_type, TYPE_GUIDANCE["concept"])
+    type_hint  = TYPE_HINTS.get(topic_type, TYPE_HINTS["concept"])
     path_str   = build_path(course, unit, topic)
 
     coverage_raw = topic.get("coverage", [])
@@ -166,17 +128,21 @@ def generate_content(course, unit, topic):
     if coverage_str:
         context_block += f"\nTopics to Cover:\n{coverage_str}"
 
-    prompt = f"""You are an expert Nigerian Nursing Tutor and Nursing & Midwifery Council (NMC) CBT examiner.
+    prompt = f"""You are an expert Nigerian Nursing Tutor, Nurse Educator, and Nursing & Midwifery Council (NMCN) CBT/FQE examiner.
 
-Your task is to generate detailed, exam-focused revision material for a student preparing for the Final Qualifying Examination (FQE).
+Your task is to generate accurate, exam-focused nursing revision material from the curriculum topic provided.
+
+════════════════════════════════
+COURSE CONTEXT
 
 {context_block}
 Suggested Topic Type: {topic_type}
+Type Guidance: {type_hint}
 
 ════════════════════════════════
-OUTPUT SCHEMA
+OUTPUT FORMAT
 
-Return ONLY this JSON object — no markdown, no code fences, no text outside JSON:
+Return ONLY valid JSON — no markdown, no code fences, no commentary:
 
 {{
   "lecture_note": {{
@@ -208,86 +174,191 @@ Return ONLY this JSON object — no markdown, no code fences, no text outside JS
 }}
 
 ════════════════════════════════
-LECTURE NOTE RULES
+BEFORE WRITING — THINK FIRST (do not include this in output):
 
-The "Suggested Topic Type" is GUIDANCE ONLY.
-Structure the note the way a knowledgeable nurse educator would teach this topic.
+1. What are the core examinable concepts of this specific topic?
+2. What do students commonly confuse or get wrong about this topic?
+3. What are the priority nursing responsibilities for this topic?
+4. What would an NMCN examiner most likely test on this topic?
+5. What is the best structure to teach THIS topic clearly?
 
-Suggested headings for type "{topic_type}":
-{guidance}
-
-Rules:
-- Treat suggested headings as a CHECKLIST — include only what applies to THIS topic
-- Do not strictly use the suggested heading names — rename freely or use your own
-- Skip any heading that would be empty or forced
-- Add headings not in the list if they improve understanding
-- Minimum 4 sections per note
-- Each section: 3-6 sentences of high-yield exam content
-- No filler, no motivational language, no repetition
-- Explain the WHY and HOW behind every fact
-- Include specific values, numbers, classifications where relevant
-- Include pathophysiology where applicable
-- Explain reasoning behind nursing actions
-- If "Topics to Cover" listed above, address EVERY item in the note
-- Use Curriculum Path to understand scope and context
-
-Priority for FQE:
-Definitions • Classifications • Pathophysiology • Functions • Causes • Risk factors •
-Signs & symptoms • Nursing responsibilities • Nursing priorities • Complications •
-Prevention • Patient education • Emergency management • Clinical decision-making •
-Normal vs abnormal values • Drug calculations • Legal/ethical implications
+Use your answers to guide what you write. Do not reveal this planning.
 
 ════════════════════════════════
-MCQ RULES — exactly 3 questions, strictly different levels:
+HEADING RULES
 
-Q1 — Direct recall: key definition, classification, or fact
-Q2 — Application: realistic nursing/patient/community scenario
-Q3 — Higher-order: nursing judgment, prioritization, best action, complication recognition
+Choose headings freely — there is no fixed template.
+
+Use only headings that genuinely help explain THIS topic.
+Rename headings if a better name fits.
+Add headings when needed.
+Skip headings that do not apply to this topic.
+Avoid empty or near-empty sections.
+
+The Type Guidance above shows what is typically examinable for this topic type.
+Use it as a thinking aid — not as a heading list to copy.
+
+════════════════════════════════
+CONTENT RULES
+
+Write like a skilled nurse educator teaching this topic to final-year students.
+
+Focus on:
+- Exam relevance — what is likely to be tested
+- Clinical relevance — what matters at the bedside
+- Nursing relevance — what the nurse must know and do
+- Mechanisms — how and why things happen
+- Decision-making — how nurses should respond
+
+Avoid:
+- Generic opening sentences that restate the topic title
+- Motivational or filler statements
+- Repeating the same information in different sections
+- Obvious facts that add no exam value
+
+Bad: "Blood is a vital fluid that circulates through the body."
+Good: "Blood comprises plasma (~55%) and formed elements (~45%). Plasma carries nutrients, hormones, and clotting factors, while formed elements include erythrocytes, leukocytes, and thrombocytes, each with distinct clinical significance."
+
+════════════════════════════════
+DEPTH RULES
+
+Explain concepts — do not just list facts.
+
+Where relevant:
+- Explain the mechanism (how it works)
+- Explain the relationship (how parts connect)
+- Explain cause and effect (what leads to what)
+- Explain clinical significance (why it matters)
+- Explain nursing rationale (why the nurse does this)
+
+If you are not certain of a mechanism, describe what is established.
+Do not invent mechanisms, values, or guidelines.
+
+Include specific values, classifications, stages, and percentages where established and relevant.
+
+════════════════════════════════
+STRUCTURE RULES
+
+Minimum: 4 sections
+Maximum: 8 sections
+
+Each section:
+- Must contain substantive content (3-6 sentences)
+- Must teach something useful and exam-relevant
+- Must not repeat content from another section
+- Must not open by restating the heading as a sentence
+
+The note should read like a concise, focused lecture — not a dictionary entry.
+
+════════════════════════════════
+CURRICULUM COVERAGE
+
+If "Topics to Cover" are listed above:
+Every item must be addressed somewhere in the note.
+Do not skip any listed item.
+Use the Curriculum Path to understand the scope and context of this topic.
+
+════════════════════════════════
+EXAM PRIORITIES
+
+Prioritize content commonly tested in NMCN CBT, FQE, and nursing school examinations.
+
+Emphasize where relevant:
+Definitions • Classifications • Functions • Causes • Risk factors •
+Clinical manifestations • Pathophysiology • Diagnosis • Treatment •
+Nursing management • Prevention • Complications • Patient education •
+Emergency management • Professional responsibilities • Legal and ethical considerations •
+Normal and abnormal values • Drug calculations • Nigerian health context
+
+════════════════════════════════
+MCQ GENERATION — exactly 3 questions:
+
+Q1 — Direct recall: test a key definition, classification, value, or fact
+Q2 — Application: realistic nursing/patient/community scenario with enough detail to justify one answer
+Q3 — Clinical judgment: prioritization, complication recognition, best nursing action, or decision-making
+
+Difficulty increases from Q1 to Q3.
+
+════════════════════════════════
+MCQ QUALITY RULES
+
+Every question must have ONE clearly best answer.
+Avoid questions where two options could reasonably both be correct.
+Provide enough clinical detail in scenarios to justify the correct answer.
+Do not create trick questions or deliberately misleading stems.
+
+For prioritization questions, apply ABCDE principles:
+Airway → Breathing → Circulation → Disability → Exposure
+The correct answer must reflect the highest priority threat to patient safety.
 
 ════════════════════════════════
 DISTRACTOR RULES
 
-- All 4 options from the same subject area
-- Incorrect options must be plausible to an unprepared student
-- No obviously wrong options
-- Correct answer position varies across Q1, Q2, Q3
-- Correct answer must not stand out by length or phrasing
+All 4 options must belong to the same clinical category:
+- Causes with causes
+- Types with types
+- Nursing actions with nursing actions
+- Drugs with drugs
+- Values with values
+
+Incorrect options must be plausible — representing common mistakes or partially correct alternatives.
+Avoid obviously wrong answers.
+Correct answer must not stand out by length, detail, or phrasing.
+Correct answer position must vary: Q1, Q2, Q3 should not all have the same index.
 
 ════════════════════════════════
 CHARACTER LIMITS
 
 Question: max 280 characters
 Each option: max 90 characters
-Explanation: max 180 characters — minimum 2 sentences, never just 1 line
+Explanation: max 180 characters
+
+Explanation must address:
+- Why the correct answer is correct
+- Why the other options are less appropriate
 
 ════════════════════════════════
-DEPTH RULES
+NIGERIAN CONTEXT
 
-- Go beyond surface definitions
-- Explain mechanisms step by step
-- Explain why nursing actions are taken, not just what they are
-- A student reading this should UNDERSTAND the topic, not just memorize it
+Where relevant, align with:
+- NMCN expectations and scope of practice
+- Primary Health Care principles
+- Safe Motherhood and IMNCI guidelines
+- Nigerian healthcare system structure
+
+Do not invent Nigerian statistics, laws, or policies.
 
 ════════════════════════════════
 SELF-REVIEW BEFORE RETURNING
 
-Check lecture note:
-- Every section has minimum 3 substantive sentences?
-- WHY and HOW explained throughout?
-- No vague or filler sentences?
-- All "Topics to Cover" items addressed?
-- Content accurate for Nigerian FQE?
+Verify every item before returning:
 
-Check each MCQ:
-- Question stem logically consistent with options?
-- Correct answer actually answers the question?
-- No circular reasoning (symptom as both stem and option)?
-- All 4 options equally plausible?
-- Q2 scenario realistic?
-- Q3 genuinely higher-order?
-- Correct answer position varies across Q1/Q2/Q3?
+Lecture note:
+✓ No generic opening sentences
+✓ No filler or repetition
+✓ Mechanisms explained where relevant
+✓ Nursing rationale included
+✓ All "Topics to Cover" items addressed
+✓ Content is accurate and exam-focused
+✓ Headings fit this specific topic
+✓ 4-8 sections present
 
-Fix ALL issues. Return ONLY the final corrected JSON.
+MCQs:
+✓ Q1 tests recall, Q2 tests application, Q3 tests judgment
+✓ Each question has ONE clearly best answer
+✓ No circular reasoning (symptom as both stem and answer option)
+✓ All 4 options in same clinical category
+✓ Scenarios have enough detail to justify correct answer
+✓ Correct answer position varies across Q1/Q2/Q3
+✓ Explanations address correct and incorrect options
+✓ Character limits respected
+
+JSON:
+✓ Valid JSON structure
+✓ No markdown or code fences
+✓ No text outside the JSON object
+
+Fix ALL issues found. Return ONLY the final corrected JSON.
 """
 
     for attempt in range(3):
@@ -381,25 +452,22 @@ def send_poll_with_spoiler(poll, index):
     })
 
 def send_progress(done, total, recent_topics):
-    percent = round((done / total) * 100, 1) if total > 0 else 0
+    percent   = round((done / total) * 100, 1) if total > 0 else 0
     remaining = total - done
     bar_filled = int(percent / 5)
     bar = "🟩" * bar_filled + "⬜" * (20 - bar_filled)
 
-    # Build recent topics list
-    recent_lines = ""
-    for t in recent_topics:
-        recent_lines += f"  • {escape_md(t)}\n"
+    recent_lines = "".join(f"  • {escape_md(t)}\n" for t in recent_topics)
 
     msg = (
-        f"📊 *Revision Summary — Every 10 Topics*\n"
+        f"📊 *Revision Summary*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"📚 *Last 10 topics covered:*\n"
         f"{recent_lines}"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"{bar}\n"
         f"✅ *{done}* done  •  ⏳ *{remaining}* remaining  •  *{percent}%*\n"
-        f"Keep pushing — you\'re getting there! 💪"
+        f"Keep pushing — every topic counts! 💪"
     )
     tg("sendMessage", {
         "chat_id": TELEGRAM_CHAT_ID,
@@ -436,17 +504,16 @@ def main():
     state["total_sent"] = state.get("total_sent", 0) + 1
     state["completed_topics"].append(topic["topic_id"])
 
-    # Send progress every 10 topics
+    # Progress summary every 10 topics
     total_topics = curriculum_data["meta"].get("total_topics", 0)
     if total_topics > 0 and state["total_sent"] % 10 == 0:
-        # Collect last 10 topic titles from completed list
         recent_ids = state["completed_topics"][-10:]
-        # Build a lookup of topic_id -> title across all courses
-        id_to_title = {}
-        for c in courses:
-            for u in c["units"]:
-                for t in u["topics"]:
-                    id_to_title[t["topic_id"]] = t["title"]
+        id_to_title = {
+            t["topic_id"]: t["title"]
+            for c in courses
+            for u in c["units"]
+            for t in u["topics"]
+        }
         recent_titles = [id_to_title.get(tid, tid) for tid in recent_ids]
         send_progress(state["total_sent"], total_topics, recent_titles)
 
