@@ -362,26 +362,28 @@ def escape_md(text):
 
 def clean_discussion_group(channel_msg_id):
     """
-    Dynamically finds the linked discussion group and deletes the 
-    top-level forwarded channel post to keep the group feed clean.
+    Asks Telegram directly for the target discussion message ID tied to 
+    the channel post, then purges the top-level feed entry.
     """
     try:
-        chat_info = tg("getChat", {"chat_id": TELEGRAM_CHAT_ID})
+        # Request the discussion thread metadata mapped to the channel message ID
+        disc_info = tg("getDiscussionMessage", {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "message_id": channel_msg_id
+        })
         
-        if "linked_chat_id" in chat_info:
-            discussion_group_id = chat_info["linked_chat_id"]
+        if disc_info and "result" in disc_info:
+            discussion_message = disc_info["result"]
+            discussion_group_id = discussion_message["chat"]["id"]
+            discussion_msg_id   = discussion_message["message_id"]
             
-            # Scan broader offsets since Telegram shifts IDs depending on background chat updates
-            for offset in [0, 1, 2, 3]:
-                try:
-                    tg("deleteMessage", {
-                        "chat_id": discussion_group_id,
-                        "message_id": channel_msg_id + offset
-                    })
-                except Exception:
-                    continue
+            # Delete the exact forward signature message
+            tg("deleteMessage", {
+                "chat_id": discussion_group_id,
+                "message_id": discussion_msg_id
+            })
     except Exception as e:
-        print(f"Could not clean discussion forward block: {e}")
+        print(f"Native lookup cleanup bypass failed: {e}")
 
 def send_lecture_note(course, unit, topic, content):
     note = content["lecture_note"]
@@ -406,7 +408,7 @@ def send_lecture_note(course, unit, topic, content):
     
     if res and "result" in res:
         channel_msg_id = res["result"]["message_id"]
-        time.sleep(1)
+        time.sleep(2)  # Give Telegram 2 seconds to complete internal group synchronization
         clean_discussion_group(channel_msg_id)
 
 def send_poll_with_spoiler(poll, index):
@@ -426,6 +428,7 @@ def send_poll_with_spoiler(poll, index):
     
     if res and "result" in res:
         channel_msg_id = res["result"]["message_id"]
+        time.sleep(1)
         clean_discussion_group(channel_msg_id)
 
 # ─── Save state ───────────────────────────────────────────────────────────────
