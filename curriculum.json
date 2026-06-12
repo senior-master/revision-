@@ -1,6 +1,6 @@
 {
   "meta": {
-    "total_topics": 50,
+    "total_topics": 2021,
     "target_date": "2025-09-30",
     "notes": "Initial batch - 3 courses. Append more courses to the curriculum array as they become available."
   },
@@ -11204,7 +11204,7 @@
             },
             {
               "topic_id": "GNS311_U2_T15",
-              "title": "Nurse’s Role in Prevention of Haematological Disorders",
+              "title": "Nurse\u2019s Role in Prevention of Haematological Disorders",
               "topic_type": "prevention",
               "path": "Medical/Surgical Nursing IV > Haematological System > Prevention"
             }
@@ -11265,7 +11265,7 @@
             },
             {
               "topic_id": "GNS311_U3_T9",
-              "title": "Nurse’s Role in Prevention of Disorders of Special Senses",
+              "title": "Nurse\u2019s Role in Prevention of Disorders of Special Senses",
               "topic_type": "prevention",
               "path": "Medical/Surgical Nursing IV > Special Senses > Prevention"
             }
