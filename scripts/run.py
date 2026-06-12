@@ -380,16 +380,26 @@ def send_poll_with_spoiler(poll, index):
         "is_anonymous": True
     })
 
-def send_progress(done, total):
+def send_progress(done, total, recent_topics):
     percent = round((done / total) * 100, 1) if total > 0 else 0
+    remaining = total - done
     bar_filled = int(percent / 5)
     bar = "🟩" * bar_filled + "⬜" * (20 - bar_filled)
 
+    # Build recent topics list
+    recent_lines = ""
+    for t in recent_topics:
+        recent_lines += f"  • {escape_md(t)}\n"
+
     msg = (
-        f"📊 *Revision Progress*\n"
+        f"📊 *Revision Summary — Every 10 Topics*\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"📚 *Last 10 topics covered:*\n"
+        f"{recent_lines}"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
         f"{bar}\n"
-        f"*{done}* of *{total}* topics covered — *{percent}%*\n"
-        f"Keep going! Every topic counts 💪"
+        f"✅ *{done}* done  •  ⏳ *{remaining}* remaining  •  *{percent}%*\n"
+        f"Keep pushing — you\'re getting there! 💪"
     )
     tg("sendMessage", {
         "chat_id": TELEGRAM_CHAT_ID,
@@ -426,14 +436,22 @@ def main():
     state["total_sent"] = state.get("total_sent", 0) + 1
     state["completed_topics"].append(topic["topic_id"])
 
-    # Send progress every 50 topics
+    # Send progress every 10 topics
     total_topics = curriculum_data["meta"].get("total_topics", 0)
-    if total_topics > 0 and state["total_sent"] % 50 == 0:
-        send_progress(state["total_sent"], total_topics)
+    if total_topics > 0 and state["total_sent"] % 10 == 0:
+        # Collect last 10 topic titles from completed list
+        recent_ids = state["completed_topics"][-10:]
+        # Build a lookup of topic_id -> title across all courses
+        id_to_title = {}
+        for c in courses:
+            for u in c["units"]:
+                for t in u["topics"]:
+                    id_to_title[t["topic_id"]] = t["title"]
+        recent_titles = [id_to_title.get(tid, tid) for tid in recent_ids]
+        send_progress(state["total_sent"], total_topics, recent_titles)
 
     save_state()
     print(f"Done. Total sent: {state['total_sent']}")
 
 if __name__ == "__main__":
     main()
-
