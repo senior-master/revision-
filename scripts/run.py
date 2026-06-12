@@ -12,17 +12,17 @@ GROQ_API_KEY       = os.environ["GROQ_API_KEY"]
 GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 
-# ─── Topic type normalizer — maps 52 types down to 10 ─────────────────────────
+# ─── Topic type normalizer — maps all types down to 10 ────────────────────────
 TYPE_MAP = {
     # disease group
-    "disease":            "disease",
-    "condition":          "disease",
-    "disease_group":      "disease",
-    "condition_group":    "disease",
-    "complication":       "disease",
-    "pathophysiology":    "disease",
-    "cause":              "disease",
-
+    "disease":          "disease",
+    "condition":        "disease",
+    "disease_group":    "disease",
+    "condition_group":  "disease",
+    "complication":     "disease",
+    "pathophysiology":  "disease",
+    "cause":            "disease",
+    "harmful_practice": "disease",
     # procedure group
     "procedure":          "procedure",
     "process":            "procedure",
@@ -35,7 +35,6 @@ TYPE_MAP = {
     "nursing_management": "procedure",
     "prevention":         "procedure",
     "assessment":         "procedure",
-
     # concept group
     "concept":                    "concept",
     "theory":                     "concept",
@@ -58,45 +57,37 @@ TYPE_MAP = {
     "tool":                       "concept",
     "technology":                 "concept",
     "instrument":                 "concept",
-
+    "diet":                       "concept",
+    "design":                     "concept",
+    "special_group":              "concept",
     # organ group
-    "organ":     "organ",
-    "anatomy":   "organ",
-
+    "organ":   "organ",
+    "anatomy": "organ",
     # physiology group
     "physiology":            "physiology",
     "physiological_process": "physiology",
-
     # drug group
     "drug":       "drug",
     "drug_class": "drug_class",
-
     # diagnostic group
     "diagnostic":      "diagnostic",
     "diagnostic_tool": "diagnostic_tool",
-
-    # equipment group
+    # equipment
     "equipment": "equipment",
-
-    # special
-    "diet":          "concept",
-    "design":        "concept",
-    "special_group": "concept",
-    "harmful_practice": "disease",
 }
 
 # ─── Type guidance for the 10 normalized types ────────────────────────────────
 TYPE_GUIDANCE = {
-    "disease":   "may need: Overview, Causes/Risk Factors, Pathophysiology (stepwise mechanism), Clinical Manifestations (early vs late), Diagnosis (labs + clinical criteria), Treatment (medical + surgical), Nursing Management (prioritized interventions + rationales), Prevention (primary/secondary/tertiary), Complications (acute vs chronic).",
-    "drug":      "may need: Drug Class, Mechanism of Action (stepwise receptor/biochemical effect), Indications (primary + off-label), Adverse Effects (common vs severe), Contraindications, Nursing Responsibilities (before/during/after), Patient Education, Dosage Notes.",
-    "drug_class":"may need: Overview, Shared Mechanism of Action, Key Examples, Indications, Class Adverse Effects, Contraindications, Nursing Considerations (monitoring + safety patterns).",
-    "organ":     "may need: Overview, Gross Structure, Microscopic Anatomy, Functions (physiological roles), Physiology (how it works), Clinical Relevance (disease states), Nursing Considerations (assessment + monitoring).",
-    "physiology":"may need: Overview, Step-by-step Mechanism/Process, Regulatory Factors (hormonal/neural/chemical), Clinical Significance (what abnormalities mean), Nursing Implications (assessment + intervention).",
-    "procedure": "may need: Purpose/Indications, Equipment Needed, Patient Preparation, Steps (sequential + clear), Post-procedure Care, Complications (signs + management), Nursing Responsibilities.",
-    "diagnostic":"may need: Purpose, Principle, Procedure (stepwise), Normal Values/Findings, Abnormal Findings (clinical meaning), Nursing Responsibilities (before/during/after).",
-    "diagnostic_tool": "may need: Overview, Principle (how it works), Indications, Procedure (stepwise), Findings Interpretation (normal vs abnormal), Nursing Responsibilities (safety + preparation + monitoring).",
-    "equipment": "may need: Definition/Overview, Components, Indications, How to Use (stepwise), Safety Considerations, Nursing Responsibilities (maintenance + patient safety).",
-    "concept":   "may need: Definition (precise), Principles, Classification/Types, Importance, Nursing Relevance, Clinical Application, Legal/Ethical Implications if applicable.",
+    "disease":        "may need: Overview, Causes/Risk Factors, Pathophysiology (stepwise mechanism), Clinical Manifestations (early vs late), Diagnosis (labs + clinical criteria), Treatment (medical + surgical), Nursing Management (prioritized interventions + rationales), Prevention (primary/secondary/tertiary), Complications (acute vs chronic).",
+    "drug":           "may need: Drug Class, Mechanism of Action (stepwise receptor/biochemical effect), Indications (primary + off-label), Adverse Effects (common vs severe), Contraindications, Nursing Responsibilities (before/during/after), Patient Education, Dosage Notes.",
+    "drug_class":     "may need: Overview, Shared Mechanism of Action, Key Examples, Indications, Class Adverse Effects, Contraindications, Nursing Considerations (monitoring + safety patterns).",
+    "organ":          "may need: Overview, Gross Structure, Microscopic Anatomy, Functions (physiological roles), Physiology (how it works), Clinical Relevance (disease states), Nursing Considerations (assessment + monitoring).",
+    "physiology":     "may need: Overview, Step-by-step Mechanism/Process, Regulatory Factors (hormonal/neural/chemical), Clinical Significance (what abnormalities mean), Nursing Implications (assessment + intervention).",
+    "procedure":      "may need: Purpose/Indications, Equipment Needed, Patient Preparation, Steps (sequential + clear), Post-procedure Care, Complications (signs + management), Nursing Responsibilities.",
+    "diagnostic":     "may need: Purpose, Principle, Procedure (stepwise), Normal Values/Findings, Abnormal Findings (clinical meaning), Nursing Responsibilities (before/during/after).",
+    "diagnostic_tool":"may need: Overview, Principle (how it works), Indications, Procedure (stepwise), Findings Interpretation (normal vs abnormal), Nursing Responsibilities (safety + preparation + monitoring).",
+    "equipment":      "may need: Definition/Overview, Components, Indications, How to Use (stepwise), Safety Considerations, Nursing Responsibilities (maintenance + patient safety).",
+    "concept":        "may need: Definition (precise), Principles, Classification/Types, Importance, Nursing Relevance, Clinical Application, Legal/Ethical Implications if applicable.",
 }
 
 # ─── Load files ───────────────────────────────────────────────────────────────
@@ -144,25 +135,20 @@ def get_next_topic():
 
 # ─── Build path string ────────────────────────────────────────────────────────
 def build_path(course, unit, topic):
-    """Return a curriculum path string regardless of whether topic has one."""
     path_raw = topic.get("path", topic.get("context", ""))
-
     if isinstance(path_raw, list) and path_raw:
         return " > ".join(path_raw)
     if isinstance(path_raw, str) and path_raw.strip():
         return path_raw.strip()
-
-    # Auto-generate from course → unit → topic
     return f"{course['course_name']} > {unit['unit_name']} > {topic['title']}"
 
 # ─── Generate content with Groq ───────────────────────────────────────────────
 def generate_content(course, unit, topic):
-    raw_type     = topic.get("topic_type", "concept")
-    topic_type   = TYPE_MAP.get(raw_type, "concept")
-    guidance     = TYPE_GUIDANCE.get(topic_type, TYPE_GUIDANCE["concept"])
-    path_str     = build_path(course, unit, topic)
+    raw_type   = topic.get("topic_type", "concept")
+    topic_type = TYPE_MAP.get(raw_type, "concept")
+    guidance   = TYPE_GUIDANCE.get(topic_type, TYPE_GUIDANCE["concept"])
+    path_str   = build_path(course, unit, topic)
 
-    # Build coverage string
     coverage_raw = topic.get("coverage", [])
     if isinstance(coverage_raw, list) and coverage_raw:
         coverage_str = "\n".join(f"  - {item}" for item in coverage_raw)
@@ -171,7 +157,6 @@ def generate_content(course, unit, topic):
     else:
         coverage_str = ""
 
-    # Compose context block
     context_block = (
         f"Course: {course['course_name']}\n"
         f"Unit: {unit['unit_name']}\n"
@@ -226,26 +211,25 @@ Return ONLY this JSON object — no markdown, no code fences, no text outside JS
 LECTURE NOTE RULES
 
 The "Suggested Topic Type" is GUIDANCE ONLY.
-If the topic does not perfectly fit the suggested type, use your own judgment.
 Structure the note the way a knowledgeable nurse educator would teach this topic.
 
 Suggested headings for type "{topic_type}":
 {guidance}
 
 Rules:
-- Treat suggested headings as a CHECKLIST — include only what actually applies to THIS topic
-- Do not use the exact suggested heading name if a better name fits — rename freely
-- Skip any heading that would be empty or forced for this topic
+- Treat suggested headings as a CHECKLIST — include only what applies to THIS topic
+- Do not strictly use the suggested heading names — rename freely or use your own
+- Skip any heading that would be empty or forced
 - Add headings not in the list if they improve understanding
 - Minimum 4 sections per note
 - Each section: 3-6 sentences of high-yield exam content
 - No filler, no motivational language, no repetition
-- Explain the WHY and HOW behind every fact — not just what, but why it matters and how it works
+- Explain the WHY and HOW behind every fact
 - Include specific values, numbers, classifications where relevant
 - Include pathophysiology where applicable
-- Explain the reasoning behind nursing actions
-- If "Topics to Cover" is listed above, address EVERY item somewhere in the note
-- Use the Curriculum Path to understand scope and context
+- Explain reasoning behind nursing actions
+- If "Topics to Cover" listed above, address EVERY item in the note
+- Use Curriculum Path to understand scope and context
 
 Priority for FQE:
 Definitions • Classifications • Pathophysiology • Functions • Causes • Risk factors •
@@ -274,7 +258,7 @@ CHARACTER LIMITS
 
 Question: max 280 characters
 Each option: max 90 characters
-Explanation: max 180 characters — must be at least 2 sentences, not 1 line
+Explanation: max 180 characters — minimum 2 sentences, never just 1 line
 
 ════════════════════════════════
 DEPTH RULES
@@ -297,13 +281,13 @@ Check lecture note:
 Check each MCQ:
 - Question stem logically consistent with options?
 - Correct answer actually answers the question?
-- No circular reasoning (symptom used as both stem and option)?
+- No circular reasoning (symptom as both stem and option)?
 - All 4 options equally plausible?
 - Q2 scenario realistic?
 - Q3 genuinely higher-order?
 - Correct answer position varies across Q1/Q2/Q3?
 
-Fix ALL issues found. Return ONLY the final corrected JSON.
+Fix ALL issues. Return ONLY the final corrected JSON.
 """
 
     for attempt in range(3):
@@ -360,31 +344,6 @@ def escape_md(text):
         text = text.replace(ch, f"\\{ch}")
     return text
 
-def clean_discussion_group(channel_msg_id):
-    """
-    Asks Telegram directly for the target discussion message ID tied to 
-    the channel post, then purges the top-level feed entry.
-    """
-    try:
-        # Request the discussion thread metadata mapped to the channel message ID
-        disc_info = tg("getDiscussionMessage", {
-            "chat_id": TELEGRAM_CHAT_ID,
-            "message_id": channel_msg_id
-        })
-        
-        if disc_info and "result" in disc_info:
-            discussion_message = disc_info["result"]
-            discussion_group_id = discussion_message["chat"]["id"]
-            discussion_msg_id   = discussion_message["message_id"]
-            
-            # Delete the exact forward signature message
-            tg("deleteMessage", {
-                "chat_id": discussion_group_id,
-                "message_id": discussion_msg_id
-            })
-    except Exception as e:
-        print(f"Native lookup cleanup bypass failed: {e}")
-
 def send_lecture_note(course, unit, topic, content):
     note = content["lecture_note"]
     lines = []
@@ -400,23 +359,18 @@ def send_lecture_note(course, unit, topic, content):
     lines.append("\n━━━━━━━━━━━━━━━━━━━━")
     lines.append("🧠 *Test yourself — 3 questions below!*")
 
-    res = tg("sendMessage", {
+    tg("sendMessage", {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": "\n".join(lines),
         "parse_mode": "Markdown"
     })
-    
-    if res and "result" in res:
-        channel_msg_id = res["result"]["message_id"]
-        time.sleep(2)  # Give Telegram 2 seconds to complete internal group synchronization
-        clean_discussion_group(channel_msg_id)
 
 def send_poll_with_spoiler(poll, index):
     question    = poll["question"][:280]
     options     = [opt[:90] for opt in poll["options"]]
     explanation = poll["explanation"][:180]
 
-    res = tg("sendPoll", {
+    tg("sendPoll", {
         "chat_id": TELEGRAM_CHAT_ID,
         "question": f"Q{index}: {question}"[:300],
         "options": options,
@@ -425,11 +379,23 @@ def send_poll_with_spoiler(poll, index):
         "explanation": explanation,
         "is_anonymous": True
     })
-    
-    if res and "result" in res:
-        channel_msg_id = res["result"]["message_id"]
-        time.sleep(1)
-        clean_discussion_group(channel_msg_id)
+
+def send_progress(done, total):
+    percent = round((done / total) * 100, 1) if total > 0 else 0
+    bar_filled = int(percent / 5)
+    bar = "🟩" * bar_filled + "⬜" * (20 - bar_filled)
+
+    msg = (
+        f"📊 *Revision Progress*\n"
+        f"{bar}\n"
+        f"*{done}* of *{total}* topics covered — *{percent}%*\n"
+        f"Keep going! Every topic counts 💪"
+    )
+    tg("sendMessage", {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": msg,
+        "parse_mode": "Markdown"
+    })
 
 # ─── Save state ───────────────────────────────────────────────────────────────
 def save_state():
@@ -459,8 +425,15 @@ def main():
 
     state["total_sent"] = state.get("total_sent", 0) + 1
     state["completed_topics"].append(topic["topic_id"])
+
+    # Send progress every 50 topics
+    total_topics = curriculum_data["meta"].get("total_topics", 0)
+    if total_topics > 0 and state["total_sent"] % 50 == 0:
+        send_progress(state["total_sent"], total_topics)
+
     save_state()
     print(f"Done. Total sent: {state['total_sent']}")
 
 if __name__ == "__main__":
     main()
+
