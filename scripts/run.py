@@ -210,14 +210,37 @@ Focus on:
 - Mechanisms — how and why things happen
 - Decision-making — how nurses should respond
 
-Avoid:
+Avoid ALL of the following — strictly banned:
 - Generic opening sentences that restate the topic title
-- Motivational or filler statements
-- Repeating the same information in different sections
-- Obvious facts that add no exam value
+- Sentences like "Learning X is crucial for nurses..." or "Understanding X is important because..."
+- Sentences like "Nurses should be aware of X" without saying what X specifically is
+- Motivational or encouraging statements of any kind
+- Conclusion sections — revision notes have no conclusion
+- Filler sentences that explain why a topic matters without actually teaching it
+- Repeating the same point across different sections
+- Obvious beginner-level facts with no exam value
+- Vague nursing statements without specific clinical detail
+
+BANNED sentence patterns — never write anything like these:
+"[Topic] is an important aspect of nursing care."
+"Learning about [topic] is crucial for nurses to provide quality care."
+"Understanding [topic] helps nurses improve patient outcomes."
+"In conclusion, [topic] is a critical part of nursing."
+"Nurses should be sensitive to patient needs and incorporate them into care plans."
+"[Topic] plays a significant role in maintaining health."
+
+REQUIRED — every sentence must do one of these:
+- State a specific fact, value, classification, or mechanism
+- Describe a concrete nursing action with its rationale
+- Explain a cause-effect relationship
+- Describe a clinical sign, symptom, or finding
+- Give a specific intervention, drug, dose range, or procedure step
 
 Bad: "Blood is a vital fluid that circulates through the body."
-Good: "Blood comprises plasma (~55%) and formed elements (~45%). Plasma carries nutrients, hormones, and clotting factors, while formed elements include erythrocytes, leukocytes, and thrombocytes, each with distinct clinical significance."
+Good: "Blood comprises plasma (~55%) and formed elements (~45%). Plasma transports nutrients, hormones, clotting factors, and waste. Formed elements include erythrocytes (O2 transport), leukocytes (immunity), and thrombocytes (haemostasis)."
+
+Bad: "Nurses should promote rest and sleep as it is important for recovery."
+Good: "Cluster nursing activities to allow 90-minute uninterrupted sleep cycles. Offer earplugs, dim lighting after 9PM, and schedule non-urgent medications outside sleep hours. Avoid waking patients for routine observations unless clinically indicated."
 
 ════════════════════════════════
 DEPTH RULES
@@ -460,7 +483,7 @@ def send_progress(done, total, recent_topics):
     recent_lines = "".join(f"  • {escape_md(t)}\n" for t in recent_topics)
 
     msg = (
-        f"📊 *Revision Summary*\n"
+        f"📊 *Revision Summary — Every 10 Topics*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"📚 *Last 10 topics covered:*\n"
         f"{recent_lines}"
