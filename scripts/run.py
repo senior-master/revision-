@@ -104,31 +104,9 @@ def build_path(course, unit, topic):
         return path_raw.strip()
     return f"{course['course_name']} > {unit['unit_name']} > {topic['title']}"
 
-# ─── Generate content with Groq ───────────────────────────────────────────────
-def generate_content(course, unit, topic):
-    raw_type   = topic.get("topic_type", "concept")
-    topic_type = TYPE_MAP.get(raw_type, "concept")
-    type_hint  = TYPE_HINTS.get(topic_type, TYPE_HINTS["concept"])
-    path_str   = build_path(course, unit, topic)
-
-    coverage_raw = topic.get("coverage", [])
-    if isinstance(coverage_raw, list) and coverage_raw:
-        coverage_str = "\n".join(f"  - {item}" for item in coverage_raw)
-    elif isinstance(coverage_raw, str) and coverage_raw.strip():
-        coverage_str = coverage_raw.strip()
-    else:
-        coverage_str = ""
-
-    context_block = (
-        f"Course: {course['course_name']}\n"
-        f"Unit: {unit['unit_name']}\n"
-        f"Topic: {topic['title']}\n"
-        f"Curriculum Path: {path_str}"
-    )
-    if coverage_str:
-        context_block += f"\nTopics to Cover:\n{coverage_str}"
-
-    prompt = f"""You are an expert Nigerian Nursing Tutor, Nurse Educator, and Nursing & Midwifery Council (NMCN) CBT/FQE examiner.
+# ─── Build prompt ────────────────────────────────────────────────────────────
+def build_prompt(context_block, topic_type, type_hint):
+    return f"""You are an expert Nigerian Nursing Tutor, Nurse Educator, and Nursing & Midwifery Council (NMCN) CBT/FQE examiner.
 
 Your task is to generate accurate, exam-focused nursing revision material from the curriculum topic provided.
 
@@ -384,45 +362,154 @@ JSON:
 Fix ALL issues found. Return ONLY the final corrected JSON.
 """
 
-    for attempt in range(3):
-        try:
-            headers = {
-                "Authorization": f"Bearer {GROQ_API_KEY}",
-                "Content-Type": "application/json"
-            }
-            body = {
-                "model": GROQ_MODEL,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.4
-            }
-            response = requests.post(GROQ_URL, headers=headers, json=body, timeout=60)
-            response.raise_for_status()
+# ─── Fallback chain — best model first ───────────────────────────────────────
+FALLBACK_CHAIN = [
+    {
+        "name":     "GPT-OSS 120B (Groq)",
+        "provider": "groq",
+        "model":    "openai/gpt-oss-120b",
+        "url":      "https://api.groq.com/openai/v1/chat/completions",
+    },
+    {
+        "name":     "GPT-OSS 120B (OpenRouter)",
+        "provider": "openrouter",
+        "model":    "openai/gpt-oss-120b:free",
+        "url":      "https://openrouter.ai/api/v1/chat/completions",
+    },
+    {
+        "name":     "Poolside Laguna M.1 (OpenRouter)",
+        "provider": "openrouter",
+        "model":    "poolside/laguna-m.1-20260312:free",
+        "url":      "https://openrouter.ai/api/v1/chat/completions",
+    },
+    {
+        "name":     "Llama 4 Maverick (Groq)",
+        "provider": "groq",
+        "model":    "meta-llama/llama-4-maverick-17b-128e-instruct",
+        "url":      "https://api.groq.com/openai/v1/chat/completions",
+    },
+    {
+        "name":     "Nvidia Nemotron 30B (OpenRouter)",
+        "provider": "openrouter",
+        "model":    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning-20260428:free",
+        "url":      "https://openrouter.ai/api/v1/chat/completions",
+    },
+    {
+        "name":     "Llama 3.3 70B (Groq) — last resort",
+        "provider": "groq",
+        "model":    "llama-3.3-70b-versatile",
+        "url":      "https://api.groq.com/openai/v1/chat/completions",
+    },
+]
 
-            text = response.json()["choices"][0]["message"]["content"].strip()
-            if text.startswith("```"):
-                text = text.split("```")[1]
-                if text.startswith("json"):
-                    text = text[4:]
-            text = text.strip()
+GROQ_API_KEY       = os.environ.get("GROQ_API_KEY", "")
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 
+def get_api_key(provider):
+    if provider == "groq":
+        return GROQ_API_KEY
+    return OPENROUTER_API_KEY
+
+# ─── Generate content with fallback chain ────────────────────────────────────
+def generate_content(course, unit, topic):
+    raw_type   = topic.get("topic_type", "concept")
+    topic_type = TYPE_MAP.get(raw_type, "concept")
+    type_hint  = TYPE_HINTS.get(topic_type, TYPE_HINTS["concept"])
+    path_str   = build_path(course, unit, topic)
+
+    coverage_raw = topic.get("coverage", [])
+    if isinstance(coverage_raw, list) and coverage_raw:
+        coverage_str = "\n".join(f"  - {item}" for item in coverage_raw)
+    elif isinstance(coverage_raw, str) and coverage_raw.strip():
+        coverage_str = coverage_raw.strip()
+    else:
+        coverage_str = ""
+
+    context_block = (
+        f"Course: {course['course_name']}\n"
+        f"Unit: {unit['unit_name']}\n"
+        f"Topic: {topic['title']}\n"
+        f"Curriculum Path: {path_str}"
+    )
+    if coverage_str:
+        context_block += f"\nTopics to Cover:\n{coverage_str}"
+
+    prompt = build_prompt(context_block, topic_type, type_hint)
+
+    for model in FALLBACK_CHAIN:
+        api_key = get_api_key(model["provider"])
+        if not api_key:
+            print(f"  Skipping {model['name']} — no API key")
+            continue
+
+        print(f"  Trying: {model['name']}...")
+
+        for attempt in range(2):
             try:
-                return json.loads(text)
-            except json.JSONDecodeError as je:
-                print(f"JSON parse error attempt {attempt+1}: {je}\nRaw: {text[:400]}")
-                if attempt < 2:
-                    time.sleep(10)
-                    continue
-                raise
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                }
+                body = {
+                    "model": model["model"],
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.4
+                }
+                response = requests.post(
+                    model["url"], headers=headers, json=body, timeout=60
+                )
+                response.raise_for_status()
 
-        except json.JSONDecodeError:
-            raise
-        except Exception as e:
-            if "429" in str(e) and attempt < 2:
-                wait = 30 * (attempt + 1)
-                print(f"Rate limited. Waiting {wait}s before retry {attempt+2}/3...")
-                time.sleep(wait)
-            else:
-                raise
+                text = response.json()["choices"][0]["message"]["content"].strip()
+
+                # Strip markdown fences
+                if "```" in text:
+                    text = text.split("```")[1]
+                    if text.startswith("json"):
+                        text = text[4:]
+                text = text.strip()
+
+                # Validate JSON before accepting
+                parsed = json.loads(text)
+
+                # Validate required structure
+                if "lecture_note" not in parsed or "polls" not in parsed:
+                    raise ValueError("Missing lecture_note or polls in response")
+                if len(parsed.get("polls", [])) < 3:
+                    raise ValueError(f"Only {len(parsed.get('polls', []))} polls returned")
+                if len(parsed["lecture_note"].get("sections", [])) < 2:
+                    raise ValueError("Too few sections in lecture note")
+
+                print(f"  ✅ Success: {model['name']}")
+                return parsed
+
+            except json.JSONDecodeError as je:
+                print(f"  ❌ JSON error from {model['name']}: {je}")
+                if attempt == 0:
+                    time.sleep(5)
+                    continue
+                break  # Try next model
+
+            except ValueError as ve:
+                print(f"  ❌ Structure error from {model['name']}: {ve}")
+                break  # Try next model
+
+            except Exception as e:
+                err = str(e)
+                if "429" in err:
+                    print(f"  ⚠️ Rate limited: {model['name']}")
+                elif "404" in err:
+                    print(f"  ⚠️ Model not found: {model['name']}")
+                elif "503" in err or "502" in err:
+                    print(f"  ⚠️ Service down: {model['name']}")
+                else:
+                    print(f"  ❌ Error: {model['name']} — {err[:80]}")
+                if attempt == 0 and "429" in err:
+                    time.sleep(15)
+                    continue
+                break  # Try next model
+
+    raise RuntimeError("All models in fallback chain failed — cannot generate content")
 
 # ─── Telegram helpers ─────────────────────────────────────────────────────────
 def tg(method, payload):
