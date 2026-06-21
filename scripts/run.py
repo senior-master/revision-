@@ -156,7 +156,7 @@ BEFORE WRITING — THINK FIRST (do not include this in output):
 
 1. What are the core examinable concepts of this specific topic?
 2. What do students commonly confuse or get wrong about this topic?
-3. What are the priority nursing responsibilities for this topic?
+3. How can i teach it without making things complex.
 4. What would an NMCN examiner most likely test on this topic?
 5. What is the best structure to teach THIS topic clearly?
 
@@ -172,14 +172,15 @@ Rename headings if a better name fits.
 Add headings when needed.
 Skip headings that do not apply to this topic.
 Avoid empty or near-empty sections.
-
+Avoid conclusions, nursing implications, or headings like that.
+All headings most be those that can contain a highly relevant content about the main topic under it, if not: skip that heading.
 The Type Guidance above shows what is typically examinable for this topic type.
 Use it as a thinking aid — not as a heading list to copy.
 
 ════════════════════════════════
 CONTENT RULES
 
-Write like a skilled nurse educator teaching this topic to final-year students.
+Write like a skilled nurse educator teaching this topic to intake students.
 
 Focus on:
 - Exam relevance — what is likely to be tested
@@ -214,7 +215,7 @@ REQUIRED — every sentence must do one of these:
 - Describe a clinical sign, symptom, or finding
 - Give a specific intervention, drug, dose range, or procedure step
 
-Bad: "Blood is a vital fluid that circulates through the body."
+
 Good: "Blood comprises plasma (~55%) and formed elements (~45%). Plasma transports nutrients, hormones, clotting factors, and waste. Formed elements include erythrocytes (O2 transport), leukocytes (immunity), and thrombocytes (haemostasis)."
 
 Bad: "Nurses should promote rest and sleep as it is important for recovery."
@@ -240,16 +241,19 @@ Include specific values, classifications, stages, and percentages where establis
 ════════════════════════════════
 STRUCTURE RULES
 
-Minimum: 4 sections
+Minimum: 3 sections
+Medium:  5 sections 
 Maximum: 8 sections
+(depending on the topic nature)
 
 Each section:
-- Must contain substantive content (3-6 sentences)
+- Must contain substantive content (2-5 sentences) 
 - Must teach something useful and exam-relevant
 - Must not repeat content from another section
 - Must not open by restating the heading as a sentence
 
 The note should read like a concise, focused lecture — not a dictionary entry.
+Use very simple English. 
 
 ════════════════════════════════
 CURRICULUM COVERAGE
@@ -268,15 +272,15 @@ Emphasize where relevant:
 Definitions • Classifications • Functions • Causes • Risk factors •
 Clinical manifestations • Pathophysiology • Diagnosis • Treatment •
 Nursing management • Prevention • Complications • Patient education •
-Emergency management • Professional responsibilities • Legal and ethical considerations •
-Normal and abnormal values • Drug calculations • Nigerian health context
+Emergency management • Professional responsibilities •
+Normal and abnormal values • Drug calculations 
 
 ════════════════════════════════
 MCQ GENERATION — exactly 3 questions:
 
 Q1 — Direct recall: test a key definition, classification, value, or fact
 Q2 — Application: realistic nursing/patient/community scenario with enough detail to justify one answer
-Q3 — Clinical judgment: prioritization, complication recognition, best nursing action, or decision-making
+Q3 — Clinical judgment: prioritization, complication recognition, best nursing action, decision-making, etc
 
 Difficulty increases from Q1 to Q3.
 
@@ -342,7 +346,7 @@ Lecture note:
 ✓ All "Topics to Cover" items addressed
 ✓ Content is accurate and exam-focused
 ✓ Headings fit this specific topic
-✓ 4-8 sections present
+✓ 3-8 sections present
 
 MCQs:
 ✓ Q1 tests recall, Q2 tests application, Q3 tests judgment
