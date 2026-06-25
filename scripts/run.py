@@ -172,15 +172,16 @@ Rename headings if a better name fits.
 Add headings when needed.
 Skip headings that do not apply to this topic.
 Avoid empty or near-empty sections.
-Avoid conclusions, nursing implications, or headings like that.
+Avoid conclusions,legal implications,  nursing implications, or headings like that.
 All headings most be those that can contain a highly relevant content about the main topic under it, if not: skip that heading.
 The Type Guidance above shows what is typically examinable for this topic type.
 Use it as a thinking aid — not as a heading list to copy.
+All headings most be based on most existing and most relevant part of the topic.
 
 ════════════════════════════════
 CONTENT RULES
 
-Write like a skilled nurse educator teaching this topic to intake students.
+Write like a skilled nurse educator helping a student nurse revise  this topic for NMCN exam, and this topic is 1 out of 2021 topics, and they most be covered before November, 2026. so, summary of hey concepst is needed. 
 
 Focus on:
 - Exam relevance — what is likely to be tested
@@ -214,9 +215,9 @@ REQUIRED — every sentence must do one of these:
 - Explain a cause-effect relationship
 - Describe a clinical sign, symptom, or finding
 - Give a specific intervention, drug, dose range, or procedure step
+- All content most be based on most relevant and exciting part of the topic.
 
-
-Good: "Blood comprises plasma (~55%) and formed elements (~45%). Plasma transports nutrients, hormones, clotting factors, and waste. Formed elements include erythrocytes (O2 transport), leukocytes (immunity), and thrombocytes (haemostasis)."
+Good: "Blood is a fluid connecttive tissue   comprises plasma (~55%) and formed elements (~45%). Plasma transports nutrients, hormones, clotting factors, and waste. Formed elements include erythrocytes (O2 transport), leukocytes (immunity), and thrombocytes (haemostasis)."
 
 Bad: "Nurses should promote rest and sleep as it is important for recovery."
 Good: "Cluster nursing activities to allow 90-minute uninterrupted sleep cycles. Offer earplugs, dim lighting after 9PM, and schedule non-urgent medications outside sleep hours. Avoid waking patients for routine observations unless clinically indicated."
@@ -232,9 +233,11 @@ Where relevant:
 - Explain cause and effect (what leads to what)
 - Explain clinical significance (why it matters)
 - Explain nursing rationale (why the nurse does this)
-
+- Make sure you have evidence about a content before saying it but dont rreveal evidence like inform of citations etc.
 If you are not certain of a mechanism, describe what is established.
 Do not invent mechanisms, values, or guidelines.
+- Dont go too deep like in medicine,  and dont go too shallow like teaching uneducated person. 
+- Use very simple English. 
 
 Include specific values, classifications, stages, and percentages where established and relevant.
 
@@ -242,12 +245,12 @@ Include specific values, classifications, stages, and percentages where establis
 STRUCTURE RULES
 
 Minimum: 3 sections
-Medium:  5 sections 
-Maximum: 8 sections
+Medium:  4 sections 
+Maximum: 5 sections
 (depending on the topic nature)
 
 Each section:
-- Must contain substantive content (2-5 sentences) 
+- Must contain substantive content (1-3 sentences) 
 - Must teach something useful and exam-relevant
 - Must not repeat content from another section
 - Must not open by restating the heading as a sentence
@@ -314,9 +317,9 @@ Correct answer position must vary: Q1, Q2, Q3 should not all have the same index
 ════════════════════════════════
 CHARACTER LIMITS
 
-Question: max 280 characters
+Question: max 200 characters
 Each option: max 90 characters
-Explanation: max 180 characters
+Explanation: max 150 characters
 
 Explanation must address:
 - Why the correct answer is correct
@@ -346,7 +349,7 @@ Lecture note:
 ✓ All "Topics to Cover" items addressed
 ✓ Content is accurate and exam-focused
 ✓ Headings fit this specific topic
-✓ 3-8 sections present
+✓ 3-5 sections present
 
 MCQs:
 ✓ Q1 tests recall, Q2 tests application, Q3 tests judgment
@@ -563,7 +566,7 @@ def send_poll_with_spoiler(poll, index):
         "correct_option_id": poll["correct_index"],
         "explanation": explanation,
         "is_anonymous": True
-    })
+    })  
 
 def send_progress(done, total, recent_topics):
     percent   = round((done / total) * 100, 1) if total > 0 else 0
