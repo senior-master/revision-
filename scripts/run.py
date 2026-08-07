@@ -11,7 +11,8 @@ TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID   = os.environ["TELEGRAM_CHAT_ID"]
 
 # ─── Gemini config ────────────────────────────────────────────────────────────
-MODEL_NAME = "gemini-2.5-flash-lite"
+MODEL_NAME = "gemini-3.5-flash-lite"
+
 
 _API_KEYS = None
 _CURRENT_KEY_INDEX = 0
