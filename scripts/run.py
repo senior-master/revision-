@@ -1,16 +1,109 @@
 import os
 import json
 import time
+import urllib.request
+import urllib.error
 import requests
 from datetime import datetime, date
 
 # ─── Config from GitHub Secrets ───────────────────────────────────────────────
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID   = os.environ["TELEGRAM_CHAT_ID"]
-GROQ_API_KEY       = os.environ["GROQ_API_KEY"]
 
-GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL = "llama-3.3-70b-versatile"
+# ─── Gemini config ────────────────────────────────────────────────────────────
+MODEL_NAME = "gemini-2.5-flash-lite"
+
+_API_KEYS = None
+_CURRENT_KEY_INDEX = 0
+
+def _load_api_keys():
+    multi = os.environ.get("GEMINI_API_KEYS", "")
+    keys = [k.strip() for k in multi.split(",") if k.strip()]
+    if not keys:
+        single = os.environ.get("GEMINI_API_KEY", "").strip()
+        if single:
+            keys = [single]
+    if not keys:
+        raise RuntimeError(
+            "No Gemini API key(s) found. Set GEMINI_API_KEYS (comma-separated) "
+            "or GEMINI_API_KEY."
+        )
+    return keys
+
+def _get_keys():
+    global _API_KEYS
+    if _API_KEYS is None:
+        _API_KEYS = _load_api_keys()
+    return _API_KEYS
+
+def _request_once(system_prompt, user_prompt):
+    global _CURRENT_KEY_INDEX
+    keys = _get_keys()
+
+    payload = {
+        "system_instruction": {"parts": [{"text": system_prompt}]},
+        "contents": [{"parts": [{"text": user_prompt}]}],
+        "generationConfig": {"response_mime_type": "application/json"},
+    }
+    data = json.dumps(payload).encode("utf-8")
+
+    last_error_text = None
+    attempts = 0
+    start_index = _CURRENT_KEY_INDEX
+    resp_body = None
+
+    while attempts < len(keys):
+        key_index = (start_index + attempts) % len(keys)
+        api_key = keys[key_index]
+        url = (
+            "https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{MODEL_NAME}:generateContent?key={api_key}"
+        )
+        req = urllib.request.Request(
+            url, data=data, headers={"Content-Type": "application/json"}
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=180) as resp:
+                resp_body = json.loads(resp.read().decode("utf-8"))
+            _CURRENT_KEY_INDEX = key_index
+            break
+        except urllib.error.HTTPError as e:
+            body_text = e.read().decode("utf-8", errors="replace")
+            is_quota_error = e.code == 429
+            if not is_quota_error:
+                try:
+                    status = json.loads(body_text).get("error", {}).get("status", "")
+                    is_quota_error = status == "RESOURCE_EXHAUSTED"
+                except Exception:
+                    pass
+            if is_quota_error:
+                print(f"⚠️  Key #{key_index+1}/{len(keys)} hit quota. Trying next key...")
+                last_error_text = body_text
+                attempts += 1
+                continue
+            raise RuntimeError(f"Gemini API HTTP {e.code}: {body_text[:500]}")
+        except urllib.error.URLError as e:
+            raise RuntimeError(f"Network error: {e}")
+    else:
+        raise RuntimeError(
+            f"All {len(keys)} Gemini key(s) hit quota. Last error: {last_error_text}"
+        )
+
+    try:
+        return resp_body["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except (KeyError, IndexError):
+        raise ValueError(f"Unexpected Gemini response: {json.dumps(resp_body)[:500]}")
+
+def call_gemini(system_prompt, user_prompt, _is_retry=False):
+    raw_text = _request_once(system_prompt, user_prompt)
+    try:
+        return json.loads(raw_text, strict=False)
+    except json.JSONDecodeError as e:
+        if not _is_retry:
+            print("⚠️  Malformed JSON, retrying once...")
+            return call_gemini(system_prompt, user_prompt, _is_retry=True)
+        raise ValueError(f"Invalid JSON after retry: {e}\nRaw: {raw_text[:500]}")
 
 # ─── Topic type normalizer — maps all types down to 10 ────────────────────────
 TYPE_MAP = {
@@ -38,18 +131,17 @@ TYPE_MAP = {
     "equipment": "equipment",
 }
 
-# ─── Type context hints (NOT heading templates — just thinking guidance) ───────
 TYPE_HINTS = {
-    "disease":        "This is a disease/condition. Key examinable areas typically include: aetiology, pathophysiology, clinical features, diagnosis, medical/nursing management, complications, prevention.",
-    "drug":           "This is a specific drug. Key examinable areas typically include: drug class, mechanism of action, indications, adverse effects, contraindications, nursing responsibilities, patient education.",
-    "drug_class":     "This is a drug class/group. Key examinable areas typically include: shared mechanism, class examples, indications, class adverse effects, nursing monitoring patterns.",
-    "organ":          "This is an organ or anatomical structure. Key examinable areas typically include: structure, location, functions, physiological roles, clinical relevance, nursing assessment focus.",
-    "physiology":     "This is a physiological process. Key examinable areas typically include: step-by-step mechanism, regulatory factors, normal values, clinical significance of abnormalities, nursing implications.",
-    "procedure":      "This is a nursing/clinical procedure or process. Key examinable areas typically include: purpose, indications, equipment, preparation, steps, post-procedure care, complications, nursing responsibilities.",
-    "diagnostic":     "This is a diagnostic test or investigation. Key examinable areas typically include: purpose, principle, normal values, abnormal findings and their meaning, nursing responsibilities before/during/after.",
-    "diagnostic_tool":"This is a diagnostic device or tool. Key examinable areas typically include: principle of operation, indications, how to use, findings interpretation, nursing responsibilities.",
-    "equipment":      "This is clinical equipment. Key examinable areas typically include: components, indications, correct usage, safety considerations, nursing responsibilities.",
-    "concept":        "This is a concept, theory, principle, or professional topic. Key examinable areas typically include: definition, principles, classification, importance, nursing application, clinical or legal relevance.",
+    "disease":        "Key examinable areas: aetiology, pathophysiology, clinical features, diagnosis, medical/nursing management, complications, prevention.",
+    "drug":           "Key examinable areas: drug class, mechanism of action, indications, adverse effects, contraindications, nursing responsibilities, patient education.",
+    "drug_class":     "Key examinable areas: shared mechanism, class examples, indications, class adverse effects, nursing monitoring patterns.",
+    "organ":          "Key examinable areas: structure, location, functions, physiological roles, clinical relevance, nursing assessment focus.",
+    "physiology":     "Key examinable areas: step-by-step mechanism, regulatory factors, normal values, clinical significance of abnormalities, nursing implications.",
+    "procedure":      "Key examinable areas: purpose, indications, equipment, preparation, steps, post-procedure care, complications, nursing responsibilities.",
+    "diagnostic":     "Key examinable areas: purpose, principle, normal values, abnormal findings and their meaning, nursing responsibilities before/during/after.",
+    "diagnostic_tool":"Key examinable areas: principle of operation, indications, how to use, findings interpretation, nursing responsibilities.",
+    "equipment":      "Key examinable areas: components, indications, correct usage, safety considerations, nursing responsibilities.",
+    "concept":        "Key examinable areas: definition, principles, classification, importance, nursing application, clinical or legal relevance.",
 }
 
 # ─── Load files ───────────────────────────────────────────────────────────────
@@ -104,320 +196,7 @@ def build_path(course, unit, topic):
         return path_raw.strip()
     return f"{course['course_name']} > {unit['unit_name']} > {topic['title']}"
 
-# ─── Build prompt ────────────────────────────────────────────────────────────
-def build_prompt(context_block, topic_type, type_hint):
-    return f"""You are an expert Nigerian Nursing Tutor, Nurse Educator, and Nursing & Midwifery Council (NMCN) CBT/FQE examiner.
-
-Your task is to generate accurate, exam-focused nursing revision material from the curriculum topic provided.
-
-════════════════════════════════
-COURSE CONTEXT
-
-{context_block}
-Suggested Topic Type: {topic_type}
-Type Guidance: {type_hint}
-
-════════════════════════════════
-OUTPUT FORMAT
-
-Return ONLY valid JSON — no markdown, no code fences, no commentary:
-
-{{
-  "lecture_note": {{
-    "emoji": "<one relevant emoji>",
-    "sections": [
-      {{"heading": "<heading>", "content": "<content>"}}
-    ]
-  }},
-  "polls": [
-    {{
-      "question": "<MCQ question>",
-      "options": ["<A>", "<B>", "<C>", "<D>"],
-      "correct_index": 0,
-      "explanation": "<explanation>"
-    }},
-    {{
-      "question": "<MCQ question>",
-      "options": ["<A>", "<B>", "<C>", "<D>"],
-      "correct_index": 1,
-      "explanation": "<explanation>"
-    }},
-    {{
-      "question": "<MCQ question>",
-      "options": ["<A>", "<B>", "<C>", "<D>"],
-      "correct_index": 2,
-      "explanation": "<explanation>"
-    }}
-  ]
-}}
-
-════════════════════════════════
-BEFORE WRITING — THINK FIRST (do not include this in output):
-
-1. What are the core examinable concepts of this specific topic?
-2. What do students commonly confuse or get wrong about this topic?
-3. How can i teach it without making things complex.
-4. What would an NMCN examiner most likely test on this topic?
-5. What is the best structure to teach THIS topic clearly?
-
-Use your answers to guide what you write. Do not reveal this planning.
-
-════════════════════════════════
-HEADING RULES
-
-Choose headings freely — there is no fixed template.
-
-Use only headings that genuinely help explain THIS topic.
-Rename headings if a better name fits.
-Add headings when needed.
-Skip headings that do not apply to this topic.
-Avoid empty or near-empty sections.
-Avoid conclusions,legal implications,  nursing implications, or headings like that.
-All headings most be those that can contain a highly relevant content about the main topic under it, if not: skip that heading.
-The Type Guidance above shows what is typically examinable for this topic type.
-Use it as a thinking aid — not as a heading list to copy.
-All headings most be based on most existing and most relevant part of the topic.
-
-════════════════════════════════
-CONTENT RULES
-
-Write like a skilled nurse educator helping a student nurse revise  this topic for NMCN exam, and this topic is 1 out of 2021 topics, and they most be covered before November, 2026. so, summary of hey concepst is needed. 
-
-Focus on:
-- Exam relevance — what is likely to be tested
-- Clinical relevance — what matters at the bedside
-- Nursing relevance — what the nurse must know and do
-- Mechanisms — how and why things happen
-- Decision-making — how nurses should respond
-
-Avoid ALL of the following — strictly banned:
-- Generic opening sentences that restate the topic title
-- Sentences like "Learning X is crucial for nurses..." or "Understanding X is important because..."
-- Sentences like "Nurses should be aware of X" without saying what X specifically is
-- Motivational or encouraging statements of any kind
-- Conclusion sections — revision notes have no conclusion
-- Filler sentences that explain why a topic matters without actually teaching it
-- Repeating the same point across different sections
-- Obvious beginner-level facts with no exam value
-- Vague nursing statements without specific clinical detail
-
-BANNED sentence patterns — never write anything like these:
-"[Topic] is an important aspect of nursing care."
-"Learning about [topic] is crucial for nurses to provide quality care."
-"Understanding [topic] helps nurses improve patient outcomes."
-"In conclusion, [topic] is a critical part of nursing."
-"Nurses should be sensitive to patient needs and incorporate them into care plans."
-"[Topic] plays a significant role in maintaining health."
-
-REQUIRED — every sentence must do one of these:
-- State a specific fact, value, classification, or mechanism
-- Describe a concrete nursing action with its rationale
-- Explain a cause-effect relationship
-- Describe a clinical sign, symptom, or finding
-- Give a specific intervention, drug, dose range, or procedure step
-- All content most be based on most relevant and exciting part of the topic.
-
-Good: "Blood is a fluid connecttive tissue   comprises plasma (~55%) and formed elements (~45%). Plasma transports nutrients, hormones, clotting factors, and waste. Formed elements include erythrocytes (O2 transport), leukocytes (immunity), and thrombocytes (haemostasis)."
-
-Bad: "Nurses should promote rest and sleep as it is important for recovery."
-Good: "Cluster nursing activities to allow 90-minute uninterrupted sleep cycles. Offer earplugs, dim lighting after 9PM, and schedule non-urgent medications outside sleep hours. Avoid waking patients for routine observations unless clinically indicated."
-
-════════════════════════════════
-DEPTH RULES
-
-Explain concepts — do not just list facts.
-
-Where relevant:
-- Explain the mechanism (how it works)
-- Explain the relationship (how parts connect)
-- Explain cause and effect (what leads to what)
-- Explain clinical significance (why it matters)
-- Explain nursing rationale (why the nurse does this)
-- Make sure you have evidence about a content before saying it but dont rreveal evidence like inform of citations etc.
-If you are not certain of a mechanism, describe what is established.
-Do not invent mechanisms, values, or guidelines.
-- Dont go too deep like in medicine,  and dont go too shallow like teaching uneducated person. 
-- Use very simple English. 
-
-Include specific values, classifications, stages, and percentages where established and relevant.
-
-════════════════════════════════
-STRUCTURE RULES
-
-Minimum: 3 sections
-Medium:  4 sections 
-Maximum: 5 sections
-(depending on the topic nature)
-
-Each section:
-- Must contain substantive content (1-3 sentences) 
-- Must teach something useful and exam-relevant
-- Must not repeat content from another section
-- Must not open by restating the heading as a sentence
-
-The note should read like a concise, focused lecture — not a dictionary entry.
-Use very simple English. 
-
-════════════════════════════════
-CURRICULUM COVERAGE
-
-If "Topics to Cover" are listed above:
-Every item must be addressed somewhere in the note.
-Do not skip any listed item.
-Use the Curriculum Path to understand the scope and context of this topic.
-
-════════════════════════════════
-EXAM PRIORITIES
-
-Prioritize content commonly tested in NMCN CBT, FQE, and nursing school examinations.
-
-Emphasize where relevant:
-Definitions • Classifications • Functions • Causes • Risk factors •
-Clinical manifestations • Pathophysiology • Diagnosis • Treatment •
-Nursing management • Prevention • Complications • Patient education •
-Emergency management • Professional responsibilities •
-Normal and abnormal values • Drug calculations 
-
-════════════════════════════════
-MCQ GENERATION — exactly 3 questions:
-
-Q1 — Direct recall: test a key definition, classification, value, or fact
-Q2 — Application: realistic nursing/patient/community scenario with enough detail to justify one answer
-Q3 — Clinical judgment: prioritization, complication recognition, best nursing action, decision-making, etc
-
-Difficulty increases from Q1 to Q3.
-
-════════════════════════════════
-MCQ QUALITY RULES
-
-Every question must have ONE clearly best answer.
-Avoid questions where two options could reasonably both be correct.
-Provide enough clinical detail in scenarios to justify the correct answer.
-Do not create trick questions or deliberately misleading stems.
-
-For prioritization questions, apply ABCDE principles:
-Airway → Breathing → Circulation → Disability → Exposure
-The correct answer must reflect the highest priority threat to patient safety.
-
-════════════════════════════════
-DISTRACTOR RULES
-
-All 4 options must belong to the same clinical category:
-- Causes with causes
-- Types with types
-- Nursing actions with nursing actions
-- Drugs with drugs
-- Values with values
-
-Incorrect options must be plausible — representing common mistakes or partially correct alternatives.
-Avoid obviously wrong answers.
-Correct answer must not stand out by length, detail, or phrasing.
-Correct answer position must vary: Q1, Q2, Q3 should not all have the same index.
-
-════════════════════════════════
-CHARACTER LIMITS
-
-Question: max 200 characters
-Each option: max 90 characters
-Explanation: max 150 characters
-
-Explanation must address:
-- Why the correct answer is correct
-- Why the other options are less appropriate
-
-════════════════════════════════
-NIGERIAN CONTEXT
-
-Where relevant, align with:
-- NMCN expectations and scope of practice
-- Primary Health Care principles
-- Safe Motherhood and IMNCI guidelines
-- Nigerian healthcare system structure
-
-Do not invent Nigerian statistics, laws, or policies.
-
-════════════════════════════════
-SELF-REVIEW BEFORE RETURNING
-
-Verify every item before returning:
-
-Lecture note:
-✓ No generic opening sentences
-✓ No filler or repetition
-✓ Mechanisms explained where relevant
-✓ Nursing rationale included
-✓ All "Topics to Cover" items addressed
-✓ Content is accurate and exam-focused
-✓ Headings fit this specific topic
-✓ 3-5 sections present
-
-MCQs:
-✓ Q1 tests recall, Q2 tests application, Q3 tests judgment
-✓ Each question has ONE clearly best answer
-✓ No circular reasoning (symptom as both stem and answer option)
-✓ All 4 options in same clinical category
-✓ Scenarios have enough detail to justify correct answer
-✓ Correct answer position varies across Q1/Q2/Q3
-✓ Explanations address correct and incorrect options
-✓ Character limits respected
-
-JSON:
-✓ Valid JSON structure
-✓ No markdown or code fences
-✓ No text outside the JSON object
-
-Fix ALL issues found. Return ONLY the final corrected JSON.
-"""
-
-# ─── Fallback chain — best model first ───────────────────────────────────────
-FALLBACK_CHAIN = [
-    {
-        "name":     "GPT-OSS 120B (Groq)",
-        "provider": "groq",
-        "model":    "openai/gpt-oss-120b",
-        "url":      "https://api.groq.com/openai/v1/chat/completions",
-    },
-    {
-        "name":     "GPT-OSS 120B (OpenRouter)",
-        "provider": "openrouter",
-        "model":    "openai/gpt-oss-120b:free",
-        "url":      "https://openrouter.ai/api/v1/chat/completions",
-    },
-    {
-        "name":     "Poolside Laguna M.1 (OpenRouter)",
-        "provider": "openrouter",
-        "model":    "poolside/laguna-m.1-20260312:free",
-        "url":      "https://openrouter.ai/api/v1/chat/completions",
-    },
-    {
-        "name":     "Llama 4 Maverick (Groq)",
-        "provider": "groq",
-        "model":    "meta-llama/llama-4-maverick-17b-128e-instruct",
-        "url":      "https://api.groq.com/openai/v1/chat/completions",
-    },
-    {
-        "name":     "Nvidia Nemotron 30B (OpenRouter)",
-        "provider": "openrouter",
-        "model":    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning-20260428:free",
-        "url":      "https://openrouter.ai/api/v1/chat/completions",
-    },
-    {
-        "name":     "Llama 3.3 70B (Groq) — last resort",
-        "provider": "groq",
-        "model":    "llama-3.3-70b-versatile",
-        "url":      "https://api.groq.com/openai/v1/chat/completions",
-    },
-]
-
-GROQ_API_KEY       = os.environ.get("GROQ_API_KEY", "")
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
-
-def get_api_key(provider):
-    if provider == "groq":
-        return GROQ_API_KEY
-    return OPENROUTER_API_KEY
-
-# ─── Generate content with fallback chain ────────────────────────────────────
+# ─── Generate content ─────────────────────────────────────────────────────────
 def generate_content(course, unit, topic):
     raw_type   = topic.get("topic_type", "concept")
     topic_type = TYPE_MAP.get(raw_type, "concept")
@@ -441,82 +220,136 @@ def generate_content(course, unit, topic):
     if coverage_str:
         context_block += f"\nTopics to Cover:\n{coverage_str}"
 
-    prompt = build_prompt(context_block, topic_type, type_hint)
+    system_prompt = """You are an expert  Nurse Educator.
 
-    for model in FALLBACK_CHAIN:
-        api_key = get_api_key(model["provider"])
-        if not api_key:
-            print(f"  Skipping {model['name']} — no API key")
-            continue
+Your task is to generate accurate, exam-focused nursing revision material.
 
-        print(f"  Trying: {model['name']}...")
+OUTPUT FORMAT — return ONLY valid JSON:
+{
+  "lecture_note": {
+    "emoji": "<one relevant emoji>",
+    "sections": [
+      {"heading": "<heading>", "content": "<content>"}
+    ]
+  },
+  "polls": [
+    {"question": "<Q>", "options": ["<A>","<B>","<C>","<D>"], "correct_index": 0, "explanation": "<explanation>"},
+    {"question": "<Q>", "options": ["<A>","<B>","<C>","<D>"], "correct_index": 1, "explanation": "<explanation>"},
+    {"question": "<Q>", "options": ["<A>","<B>","<C>","<D>"], "correct_index": 2, "explanation": "<explanation>"}
+  ]
+}"""
 
-        for attempt in range(2):
-            try:
-                headers = {
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                }
-                body = {
-                    "model": model["model"],
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.4
-                }
-                response = requests.post(
-                    model["url"], headers=headers, json=body, timeout=60
-                )
-                response.raise_for_status()
+    user_prompt = f"""Generate revision material for:
 
-                text = response.json()["choices"][0]["message"]["content"].strip()
+{context_block}
+Suggested Topic Type: {topic_type}
+Type Guidance: {type_hint}
 
-                # Strip markdown fences
-                if "```" in text:
-                    text = text.split("```")[1]
-                    if text.startswith("json"):
-                        text = text[4:]
-                text = text.strip()
+════════════════════════════════
+BEFORE WRITING — THINK FIRST (do not include in output):
+1. What are the core examinable concepts of this specific topic?
+2. What do students commonly confuse or get wrong?
+3. What are the priority nursing responsibilities?
+4. What would an NMCN examiner most likely test?
+5. What is the best structure to teach THIS topic?
 
-                # Validate JSON before accepting
-                parsed = json.loads(text)
+════════════════════════════════
+HEADING RULES
+- Choose headings freely — no fixed template
+- Use only headings that genuinely help explain THIS topic
+- Rename, add, or skip headings as needed
+- Type Guidance above is a thinking aid, not a heading list to copy
 
-                # Validate required structure
-                if "lecture_note" not in parsed or "polls" not in parsed:
-                    raise ValueError("Missing lecture_note or polls in response")
-                if len(parsed.get("polls", [])) < 3:
-                    raise ValueError(f"Only {len(parsed.get('polls', []))} polls returned")
-                if len(parsed["lecture_note"].get("sections", [])) < 2:
-                    raise ValueError("Too few sections in lecture note")
+════════════════════════════════
+CONTENT RULES
+Write like a skilled nurse educator teaching final-year students.
 
-                print(f"  ✅ Success: {model['name']}")
-                return parsed
+Focus on: exam relevance, nursing relevance, mechanisms, decision-making.
 
-            except json.JSONDecodeError as je:
-                print(f"  ❌ JSON error from {model['name']}: {je}")
-                if attempt == 0:
-                    time.sleep(5)
-                    continue
-                break  # Try next model
+STRICTLY BANNED — never write anything like:
+- "[Topic] is an important aspect of nursing care."
+- "Learning about [topic] is crucial for nurses..."
+- "Understanding [topic] helps nurses improve patient outcomes."
+- "In conclusion, [topic] is a critical part of nursing."
+- "Nurses should be sensitive to patient needs..."
+- "[Topic] plays a significant role in maintaining health."
+- Any conclusion section
+- Any motivational or filler statements
+- Vague nursing statements without specific clinical detail
 
-            except ValueError as ve:
-                print(f"  ❌ Structure error from {model['name']}: {ve}")
-                break  # Try next model
+EVERY sentence must do one of:
+- State a specific fact, value, classification, or mechanism
+- Describe a concrete nursing action with its rationale
+- Explain a cause-effect relationship
+- Describe a clinical sign, symptom, or finding
+- Give a specific intervention, drug, dose range, or procedure step
 
-            except Exception as e:
-                err = str(e)
-                if "429" in err:
-                    print(f"  ⚠️ Rate limited: {model['name']}")
-                elif "404" in err:
-                    print(f"  ⚠️ Model not found: {model['name']}")
-                elif "503" in err or "502" in err:
-                    print(f"  ⚠️ Service down: {model['name']}")
-                else:
-                    print(f"  ❌ Error: {model['name']} — {err[:80]}")
-                if attempt == 0 and "429" in err:
-                    time.sleep(15)
-                    continue
-                break  # Try next model
+Bad: "Blood is a vital fluid that circulates through the body."
+Good: "Blood comprises plasma (~55%) and formed elements (~45%). Plasma transports nutrients, hormones, clotting factors, and waste. Formed elements include erythrocytes (O2 transport), leukocytes (immunity), and thrombocytes (haemostasis)."
 
-    raise RuntimeError("All models in fallback chain failed — cannot generate content")
+Bad: "Nurses should promote rest and sleep as it is important for recovery."
+Good: "Cluster nursing activities to allow 90-minute uninterrupted sleep cycles. Offer earplugs, dim lighting after 9PM, and schedule non-urgent medications outside sleep hours."
+
+════════════════════════════════
+DEPTH RULES
+- Explain mechanisms step by step
+- Include specific values, classifications, stages, percentages
+- Explain nursing rationale — not just what, but why
+- Do not invent mechanisms or values
+
+════════════════════════════════
+STRUCTURE
+- Minimum 4 sections, maximum 8
+- Each section: 3-6 substantive sentences
+- No section opens by restating its heading
+- If "Topics to Cover" listed above — address EVERY item
+
+════════════════════════════════
+EXAM PRIORITIES
+Definitions • Classifications • Pathophysiology • Functions • Causes • Risk factors •
+Clinical manifestations • Diagnosis • Treatment • Nursing management • Prevention •
+Complications • Patient education • Emergency management • Normal/abnormal values •
+Drug calculations • Legal/ethical considerations • Nigerian health context
+
+════════════════════════════════
+MCQ RULES — exactly 3 questions
+
+DISTRACTOR RULES:
+- All 4 options in same clinical category (causes with causes, actions with actions)
+- Incorrect options must be plausible — common mistakes or partial alternatives
+- Correct answer must not stand out by length or phrasing
+- Correct answer position varies across Q1/Q2/Q3
+
+LIMITS:
+- Question: 5-10 words max  18 words
+- Each option: max 7 words
+- Explanation: max 120 characters — explain why correct AND why others are wrong
+
+
+════════════════════════════════
+SELF-REVIEW BEFORE RETURNING:
+✓ No banned filler sentences anywhere
+✓ Every sentence states a specific fact, action, or mechanism
+✓ No conclusion section
+✓ 3-5 sections present, each substantive
+✓ All "Topics to Cover" items addressed
+✓ One clearly best answer per question
+✓ No circular reasoning in MCQs
+✓ All 4 options in same  category
+✓ Correct answer position varies across Q1/Q2/Q3
+✓ Valid JSON, no markdown, no text outside JSON"""
+
+    result = call_gemini(system_prompt, user_prompt)
+
+    # Validate structure
+    if "lecture_note" not in result or "polls" not in result:
+        raise ValueError("Missing lecture_note or polls in response")
+    if len(result.get("polls", [])) < 3:
+        raise ValueError(f"Only {len(result.get('polls', []))} polls returned")
+    if len(result["lecture_note"].get("sections", [])) < 2:
+        raise ValueError("Too few sections in lecture note")
+
+    return result
 
 # ─── Telegram helpers ─────────────────────────────────────────────────────────
 def tg(method, payload):
@@ -566,14 +399,13 @@ def send_poll_with_spoiler(poll, index):
         "correct_option_id": poll["correct_index"],
         "explanation": explanation,
         "is_anonymous": True
-    })  
+    })
 
 def send_progress(done, total, recent_topics):
     percent   = round((done / total) * 100, 1) if total > 0 else 0
     remaining = total - done
     bar_filled = int(percent / 5)
     bar = "🟩" * bar_filled + "⬜" * (20 - bar_filled)
-
     recent_lines = "".join(f"  • {escape_md(t)}\n" for t in recent_topics)
 
     msg = (
