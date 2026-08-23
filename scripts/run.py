@@ -258,6 +258,7 @@ HEADING RULES
 ════════════════════════════════
 CONTENT RULES
 Write like a skilled nurse educator teaching 100 level students.
+Use simple understandabele English not hard one o.
 
 STRICTLY BANNED — never write anything like:
 - "[Topic] is an important aspect of nursing care."
@@ -287,6 +288,7 @@ DEPTH RULES
 STRUCTURE
 - Minimum 3 sections, maximum 5
 - Each section: 3-5 substantive sentences
+- Each section should be max 60 words
 - No section opens by restating its heading
 - If "Topics to Cover" listed above — address EVERY item
 
@@ -299,6 +301,9 @@ DISTRACTOR RULES:
 - Incorrect options must be plausible — common mistakes or partial alternatives
 - Correct answer must not stand out by length or phrasing
 - Correct answer position varies across Q1/Q2/Q3
+- Add emoji in beginning of every option. eg. option 1: "😘cell", option 2. "🥰tissue", etc.
+- Allowed emojis: [😀😃😄😁😆😅🤣😂🙂🙃😉😊😇🥰😍🤩😘😗☺😚😋😛🤑🤗🤭🤫🤔🤨🙄😏😒🤥😪😴😷🤒🤕🤮🤧🥶🤓😎🥳🤠🤯😎😲😮😟🥺😰😢😭😭😫🥱😤😡🤬😈👺👹🤡☠💀👻👽🙈🙉🙊💘💝💖💗💞💕💟❣💔❤🧡💛💚💙💜🤎🖤🤍💯💥💫👋🤚🖐✋🖖👌🤏✌🤞🤟🤘🤙👈👉👆🖕👇☝️👍👎✊👊🤛🤜👏🙌👐🤲🤝🙏✍👀🧠💃🥇🏅🏆🎉🎊🧨🎭🏁🚩🇳🇬🇳🇬]
+- Choose emoji randomly not depending on option value and not depending on emoji chosen on other options. 
 
 LIMITS:
 - Question: 5-10 words
