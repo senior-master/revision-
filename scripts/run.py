@@ -303,7 +303,7 @@ DISTRACTOR RULES:
 - Correct answer position varies across Q1/Q2/Q3
 - Add emoji in beginning of every option. eg. option 1: "😘cell", option 2. "🥰tissue", etc.
 - Allowed emojis: [😀😃😄😁😆😅🤣😂🙂🙃😉😊😇🥰😍🤩😘😗☺😚😋😛🤑🤗🤭🤫🤔🤨🙄😏😒🤥😪😴😷🤒🤕🤮🤧🥶🤓😎🥳🤠🤯😎😲😮😟🥺😰😢😭😭😫🥱😤😡🤬😈👺👹🤡☠💀👻👽🙈🙉🙊💘💝💖💗💞💕💟❣💔❤🧡💛💚💙💜🤎🖤🤍💯💥💫👋🤚🖐✋🖖👌🤏✌🤞🤟🤘🤙👈👉👆🖕👇☝️👍👎✊👊🤛🤜👏🙌👐🤲🤝🙏✍👀🧠💃🥇🏅🏆🎉🎊🧨🎭🏁🚩🇳🇬🇳🇬]
-- Choose emoji randomly not depending on option value and not depending on emoji chosen on other options. 
+- Choose emoji randomly from list of allowed emoji above, and dont invent emoji that is not in "Allowed emoji" list above
 
 LIMITS:
 - Question: 5-10 words
