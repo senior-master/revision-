@@ -1,10 +1,11 @@
 import os
 import json
 import time
+import random
 import urllib.request
 import urllib.error
 import requests
-from datetime import datetime, date
+from datetime import datetime
 
 # ─── Config from GitHub Secrets ───────────────────────────────────────────────
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
@@ -16,6 +17,22 @@ MODEL_NAME = "gemini-3.5-flash-lite"
 
 _API_KEYS = None
 _CURRENT_KEY_INDEX = 0
+
+# ─── Emoji pool ───────────────────────────────────────────────────────────────
+ALLOWED_EMOJIS = [
+    "😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇",
+    "🥰","😍","🤩","😘","😗","☺","😚","😋","😛","🤑","🤗","🤭","🤫",
+    "🤔","🤨","🙄","😏","😒","🤥","😪","😴","😷","🤒","🤕","🤮","🤧",
+    "🥶","🤓","😎","🥳","🤠","🤯","😲","😮","😟","🥺","😰","😢","😭",
+    "😫","🥱","😤","😡","🤬","😈","👺","👹","🤡","☠","💀","👻","👽",
+    "🙈","🙉","🙊","💘","💝","💖","💗","💞","💕","💟","❣","💔","❤",
+    "🧡","💛","💚","💙","💜","🤎","🖤","🤍","💯","💥","💫","👋","🤚",
+    "🖐","✋","🖖","👌","🤏","✌","🤞","🤟","🤘","🤙","👈","👉","👆",
+    "🖕","👇","☝️","👍","👎","✊","👊","🤛","🤜","👏","🙌","👐","🤲",
+    "🤝","🙏","✍","👀","🧠","💃","🥇","🏅","🏆","🎉","🎊","🧨","🎭",
+    "🏁","🚩","🇳🇬"
+]
+
 
 def _load_api_keys():
     multi = os.environ.get("GEMINI_API_KEYS", "")
@@ -31,11 +48,13 @@ def _load_api_keys():
         )
     return keys
 
+
 def _get_keys():
     global _API_KEYS
     if _API_KEYS is None:
         _API_KEYS = _load_api_keys()
     return _API_KEYS
+
 
 def _request_once(system_prompt, user_prompt):
     global _CURRENT_KEY_INDEX
@@ -96,6 +115,7 @@ def _request_once(system_prompt, user_prompt):
     except (KeyError, IndexError):
         raise ValueError(f"Unexpected Gemini response: {json.dumps(resp_body)[:500]}")
 
+
 def call_gemini(system_prompt, user_prompt, _is_retry=False):
     raw_text = _request_once(system_prompt, user_prompt)
     try:
@@ -105,6 +125,7 @@ def call_gemini(system_prompt, user_prompt, _is_retry=False):
             print("⚠️  Malformed JSON, retrying once...")
             return call_gemini(system_prompt, user_prompt, _is_retry=True)
         raise ValueError(f"Invalid JSON after retry: {e}\nRaw: {raw_text[:500]}")
+
 
 # ─── Topic type normalizer — maps all types down to 10 ────────────────────────
 TYPE_MAP = {
@@ -154,6 +175,7 @@ with open("state.json", "r") as f:
 
 courses = curriculum_data["curriculum"]
 
+
 # ─── Find next topic ──────────────────────────────────────────────────────────
 def get_next_topic():
     total_courses = len(courses)
@@ -188,6 +210,7 @@ def get_next_topic():
 
     return None, None, None
 
+
 # ─── Build path string ────────────────────────────────────────────────────────
 def build_path(course, unit, topic):
     path_raw = topic.get("path", topic.get("context", ""))
@@ -196,6 +219,53 @@ def build_path(course, unit, topic):
     if isinstance(path_raw, str) and path_raw.strip():
         return path_raw.strip()
     return f"{course['course_name']} > {unit['unit_name']} > {topic['title']}"
+
+
+# ─── Randomize poll options ───────────────────────────────────────────────────
+def randomize_poll(poll):
+    options = poll["options"]
+    answer = poll["answer"].strip()
+
+    if len(options) != 4:
+        raise ValueError(f"Poll must contain exactly 4 options: {poll}")
+
+    normalized_options = [str(option).strip() for option in options]
+
+    matching_indexes = [
+        i for i, option in enumerate(normalized_options)
+        if option == answer
+    ]
+
+    if len(matching_indexes) != 1:
+        raise ValueError(
+            f"Could not uniquely match answer '{answer}' "
+            f"to options: {normalized_options}"
+        )
+
+    correct_option = normalized_options[matching_indexes[0]]
+
+    # Give every option a different randomly selected emoji.
+    emojis = random.sample(ALLOWED_EMOJIS, 4)
+
+    option_pairs = list(zip(normalized_options, emojis))
+
+    # Shuffle option position independently of Gemini.
+    random.shuffle(option_pairs)
+
+    poll["options"] = [
+        f"{emoji}{option}"
+        for option, emoji in option_pairs
+    ]
+
+    for index, (option, emoji) in enumerate(option_pairs):
+        if option == correct_option:
+            poll["correct_index"] = index
+            break
+
+    del poll["answer"]
+
+    return poll
+
 
 # ─── Generate content ─────────────────────────────────────────────────────────
 def generate_content(course, unit, topic):
@@ -221,9 +291,9 @@ def generate_content(course, unit, topic):
     if coverage_str:
         context_block += f"\nTopics to Cover:\n{coverage_str}"
 
-    system_prompt = """You are an expert  Nurse Educator.
+    system_prompt = """You are an expert Nurse Educator.
 
-Your task is to generate professional, exam-focused nursing revision material. don't mention exam in your content though. 
+Your task is to generate professional, exam-focused nursing revision material. don't mention exam in your content though.
 
 OUTPUT FORMAT — return ONLY valid JSON:
 {
@@ -234,11 +304,34 @@ OUTPUT FORMAT — return ONLY valid JSON:
     ]
   },
   "polls": [
-    {"question": "<Q>", "options": ["<A>","<B>","<C>","<D>"], "correct_index": 0, "explanation": "<explanation>"},
-    {"question": "<Q>", "options": ["<A>","<B>","<C>","<D>"], "correct_index": 1, "explanation": "<explanation>"},
-    {"question": "<Q>", "options": ["<A>","<B>","<C>","<D>"], "correct_index": 2, "explanation": "<explanation>"}
+    {
+      "question": "<Q>",
+      "options": ["<option 1>","<option 2>","<option 3>","<option 4>"],
+      "answer": "<exact text of the correct option>",
+      "explanation": "<explanation>"
+    },
+    {
+      "question": "<Q>",
+      "options": ["<option 1>","<option 2>","<option 3>","<option 4>"],
+      "answer": "<exact text of the correct option>",
+      "explanation": "<explanation>"
+    },
+    {
+      "question": "<Q>",
+      "options": ["<option 1>","<option 2>","<option 3>","<option 4>"],
+      "answer": "<exact text of the correct option>",
+      "explanation": "<explanation>"
+    }
   ]
-}"""
+}
+
+IMPORTANT:
+- Do NOT add emojis to options.
+- Do NOT label options A, B, C, or D.
+- Return only the actual option text.
+- The "answer" field must contain the exact text of the correct option.
+- Do NOT return a correct_index.
+- Python will handle option ordering, emoji selection, emoji assignment, and correct answer position."""
 
     user_prompt = f"""Generate revision material for:
 
@@ -253,7 +346,7 @@ What is the best structure to teach THIS topic?
 HEADING RULES
 - Choose headings freely — no fixed template
 - Use only headings that genuinely help explain THIS topic
-- Dont include summary or conclusion headings at end as the whole content is for revision purpose. 
+- Dont include summary or conclusion headings at end as the whole content is for revision purpose.
 - Provide 3 to 5 headings depending on topic depth. but prioritize based on relavance.
 ════════════════════════════════
 CONTENT RULES
@@ -270,8 +363,8 @@ STRICTLY BANNED — never write anything like:
 - Any conclusion section
 - Any motivational or filler statements
 - Vague nursing statements without specific clinical detail
-- No filler 
-- No filler 
+- No filler
+- No filler
 
 Bad: "Blood is a vital fluid that circulates through the body."
 Good: "Blood is a viscous fluid connective tissue comprises plasma (~55%) and formed elements (~45%). Plasma transports nutrients, hormones, clotting factors, and waste. Formed elements include erythrocytes (O2 transport), leukocytes (immunity), and thrombocytes (haemostasis)."
@@ -296,20 +389,23 @@ STRUCTURE
 ══════════════════════
 MCQ RULES — exactly 3 questions
 
-DISTRACTOR RULES:
-- All 4 options in same clinical category (causes with causes, actions with actions)
-- Incorrect options must be plausible — common mistakes or partial alternatives
-- Correct answer must not stand out by length or phrasing
-- Correct answer position varies across Q1/Q2/Q3
-- Add emoji in beginning of every option. eg. option 1: "😘cell", option 2. "🥰tissue", etc.
-- Allowed emojis: [😀😃😄😁😆😅🤣😂🙂🙃😉😊😇🥰😍🤩😘😗☺😚😋😛🤑🤗🤭🤫🤔🤨🙄😏😒🤥😪😴😷🤒🤕🤮🤧🥶🤓😎🥳🤠🤯😎😲😮😟🥺😰😢😭😭😫🥱😤😡🤬😈👺👹🤡☠💀👻👽🙈🙉🙊💘💝💖💗💞💕💟❣💔❤🧡💛💚💙💜🤎🖤🤍💯💥💫👋🤚🖐✋🖖👌🤏✌🤞🤟🤘🤙👈👉👆🖕👇☝️👍👎✊👊🤛🤜👏🙌👐🤲🤝🙏✍👀🧠💃🥇🏅🏆🎉🎊🧨🎭🏁🚩🇳🇬🇳🇬]
-- Choose emoji randomly from list of allowed emoji above, and dont invent emoji that is not in "Allowed emoji" list above
+OPTION RULES:
+- Exactly 4 options per question.
+- Return ONLY the option text.
+- Do NOT add emojis.
+- Do NOT label options A, B, C, or D.
+- All 4 options must be in the same clinical category (causes with causes, actions with actions).
+- Incorrect options must be plausible — common mistakes or partial alternatives.
+- Correct answer must not stand out by length or phrasing.
+- The "answer" field must contain the exact text of the correct option.
+- Do NOT provide a correct_index.
+- Do NOT determine or suggest the position of the correct answer.
+- Python will randomly shuffle the options and assign emojis after generation.
 
 LIMITS:
 - Question: 5-10 words
 - Each option: max 7 words
 - Explanation: max 120 characters — explain why correct AND why others are wrong
-
 
 ════════════════════════════════
 SELF-REVIEW BEFORE RETURNING:
@@ -319,9 +415,11 @@ SELF-REVIEW BEFORE RETURNING:
 ✓ 3-5 sections present, each substantive
 ✓ All "Topics to Cover" items addressed
 ✓ One clearly best answer per question
-✓ the correct option provided as the answer most contain the correct answer string 
-✓ All 4 options in same  category
-✓ Correct answer position varies across Q1/Q2/Q3
+✓ The answer exactly matches one option
+✓ All 4 options in same category
+✓ No A, B, C, or D labels
+✓ No emojis in options
+✓ No correct_index
 ✓ Valid JSON, no markdown, no text outside JSON"""
 
     result = call_gemini(system_prompt, user_prompt)
@@ -334,7 +432,14 @@ SELF-REVIEW BEFORE RETURNING:
     if len(result["lecture_note"].get("sections", [])) < 2:
         raise ValueError("Too few sections in lecture note")
 
+    # Python handles all option randomization and emoji assignment.
+    result["polls"] = [
+        randomize_poll(poll)
+        for poll in result["polls"][:3]
+    ]
+
     return result
+
 
 # ─── Telegram helpers ─────────────────────────────────────────────────────────
 def tg(method, payload):
@@ -345,10 +450,12 @@ def tg(method, payload):
         r.raise_for_status()
     return r.json()
 
+
 def escape_md(text):
     for ch in ['_', '*', '`', '[']:
         text = text.replace(ch, f"\\{ch}")
     return text
+
 
 def send_lecture_note(course, unit, topic, content):
     note = content["lecture_note"]
@@ -371,6 +478,7 @@ def send_lecture_note(course, unit, topic, content):
         "parse_mode": "Markdown"
     })
 
+
 def send_poll_with_spoiler(poll, index):
     question    = poll["question"][:280]
     options     = [opt[:90] for opt in poll["options"]]
@@ -385,6 +493,7 @@ def send_poll_with_spoiler(poll, index):
         "explanation": explanation,
         "is_anonymous": True
     })
+
 
 def send_progress(done, total, recent_topics):
     percent   = round((done / total) * 100, 1) if total > 0 else 0
@@ -409,11 +518,13 @@ def send_progress(done, total, recent_topics):
         "parse_mode": "Markdown"
     })
 
+
 # ─── Save state ───────────────────────────────────────────────────────────────
 def save_state():
     state["last_run"] = datetime.utcnow().isoformat()
     with open("state.json", "w") as f:
         json.dump(state, f, indent=2)
+
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 def main():
@@ -453,6 +564,7 @@ def main():
 
     save_state()
     print(f"Done. Total sent: {state['total_sent']}")
+
 
 if __name__ == "__main__":
     main()
