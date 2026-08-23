@@ -223,7 +223,7 @@ def generate_content(course, unit, topic):
 
     system_prompt = """You are an expert  Nurse Educator.
 
-Your task is to generate accurate, exam-focused nursing revision material.
+Your task is to generate professional, exam-focused nursing revision material. don't mention exam in your content though. 
 
 OUTPUT FORMAT — return ONLY valid JSON:
 {
@@ -243,29 +243,21 @@ OUTPUT FORMAT — return ONLY valid JSON:
     user_prompt = f"""Generate revision material for:
 
 {context_block}
-Suggested Topic Type: {topic_type}
-Type Guidance: {type_hint}
 
 ════════════════════════════════
 BEFORE WRITING — THINK FIRST (do not include in output):
-1. What are the core examinable concepts of this specific topic?
-2. What do students commonly confuse or get wrong?
-3. What are the priority nursing responsibilities?
-4. What would an NMCN examiner most likely test?
-5. What is the best structure to teach THIS topic?
+
+What is the best structure to teach THIS topic?
 
 ════════════════════════════════
 HEADING RULES
 - Choose headings freely — no fixed template
 - Use only headings that genuinely help explain THIS topic
-- Rename, add, or skip headings as needed
-- Type Guidance above is a thinking aid, not a heading list to copy
-
+- Dont include summary or conclusion headings at end as the whole content is for revision purpose. 
+- Provide 3 to 5 headings depending on topic depth. but prioritize based on relavance.
 ════════════════════════════════
 CONTENT RULES
-Write like a skilled nurse educator teaching final-year students.
-
-Focus on: exam relevance, nursing relevance, mechanisms, decision-making.
+Write like a skilled nurse educator teaching 100 level students.
 
 STRICTLY BANNED — never write anything like:
 - "[Topic] is an important aspect of nursing care."
@@ -277,42 +269,29 @@ STRICTLY BANNED — never write anything like:
 - Any conclusion section
 - Any motivational or filler statements
 - Vague nursing statements without specific clinical detail
-
-EVERY sentence must do one of:
-- State a specific fact, value, classification, or mechanism
-- Describe a concrete nursing action with its rationale
-- Explain a cause-effect relationship
-- Describe a clinical sign, symptom, or finding
-- Give a specific intervention, drug, dose range, or procedure step
+- No filler 
+- No filler 
 
 Bad: "Blood is a vital fluid that circulates through the body."
-Good: "Blood comprises plasma (~55%) and formed elements (~45%). Plasma transports nutrients, hormones, clotting factors, and waste. Formed elements include erythrocytes (O2 transport), leukocytes (immunity), and thrombocytes (haemostasis)."
-
-Bad: "Nurses should promote rest and sleep as it is important for recovery."
-Good: "Cluster nursing activities to allow 90-minute uninterrupted sleep cycles. Offer earplugs, dim lighting after 9PM, and schedule non-urgent medications outside sleep hours."
+Good: "Blood is a viscous fluid connective tissue comprises plasma (~55%) and formed elements (~45%). Plasma transports nutrients, hormones, clotting factors, and waste. Formed elements include erythrocytes (O2 transport), leukocytes (immunity), and thrombocytes (haemostasis)."
 
 ════════════════════════════════
 DEPTH RULES
 - Explain mechanisms step by step
-- Include specific values, classifications, stages, percentages
+- Include specific values, classifications, stages, percentages, etc
 - Explain nursing rationale — not just what, but why
+- Do not invent mechanisms or values
 - Do not invent mechanisms or values
 
 ════════════════════════════════
 STRUCTURE
-- Minimum 4 sections, maximum 8
-- Each section: 3-6 substantive sentences
+- Minimum 3 sections, maximum 5
+- Each section: 3-5 substantive sentences
 - No section opens by restating its heading
 - If "Topics to Cover" listed above — address EVERY item
 
 ════════════════════════════════
-EXAM PRIORITIES
-Definitions • Classifications • Pathophysiology • Functions • Causes • Risk factors •
-Clinical manifestations • Diagnosis • Treatment • Nursing management • Prevention •
-Complications • Patient education • Emergency management • Normal/abnormal values •
-Drug calculations • Legal/ethical considerations • Nigerian health context
-
-════════════════════════════════
+══════════════════════
 MCQ RULES — exactly 3 questions
 
 DISTRACTOR RULES:
@@ -322,7 +301,7 @@ DISTRACTOR RULES:
 - Correct answer position varies across Q1/Q2/Q3
 
 LIMITS:
-- Question: 5-10 words max  18 words
+- Question: 5-10 words
 - Each option: max 7 words
 - Explanation: max 120 characters — explain why correct AND why others are wrong
 
@@ -335,7 +314,7 @@ SELF-REVIEW BEFORE RETURNING:
 ✓ 3-5 sections present, each substantive
 ✓ All "Topics to Cover" items addressed
 ✓ One clearly best answer per question
-✓ No circular reasoning in MCQs
+✓ the correct option provided as the answer most contain the correct answer string 
 ✓ All 4 options in same  category
 ✓ Correct answer position varies across Q1/Q2/Q3
 ✓ Valid JSON, no markdown, no text outside JSON"""
