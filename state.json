@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-09-16T13:01:10.634460",
+  "last_run": "2026-09-16T14:00:57.099481",
   "course_pointer": 17,
   "unit_pointers": {
     "GNS111": 2,
@@ -109,7 +109,7 @@
     "GNS222_U1": 0,
     "GNS222_U2": 0,
     "GNS222_U3": 0,
-    "GNS222_U4": 1
+    "GNS222_U4": 2
   },
   "completed_topics": [
     "GNS111_U1_T1",
@@ -1155,8 +1155,9 @@
     "GNS222_U3_T22",
     "GNS222_U3_T23",
     "GNS222_U3_T24",
-    "GNS222_U4_T1"
+    "GNS222_U4_T1",
+    "GNS222_U4_T2"
   ],
-  "total_sent": 1044,
+  "total_sent": 1045,
   "scores": {}
 }
