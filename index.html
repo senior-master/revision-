@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abdul's WhatsApp Automation</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f4f7f6;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            background: white;
+            padding: 35px 25px;
+            border-radius: 18px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 25px;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 15px;
+            line-height: 1.5;
+            margin-bottom: 28px;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            outline: none;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        input:focus {
+            border-color: #25D366;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: #25D366;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        #codeSection {
+            display: none;
+            margin-top: 25px;
+        }
+
+        /* Admin Code Box */
+
+        #adminCodeBox {
+            background: #fff8e1;
+            border: 2px dashed #e0a800;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .admin-label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #856404;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        #codeToSend {
+            font-size: 30px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            color: #222;
+            margin-bottom: 10px;
+        }
+
+        .copy-btn {
+            background: #333;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .message {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* Success Popup */
+
+        .popup {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .popup-box {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 350px;
+            text-align: center;
+        }
+
+        .popup-box h2 {
+            margin-bottom: 10px;
+        }
+
+        .popup-box p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .close-btn {
+            background: #25D366;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Welcome to Abdul's WhatsApp Automation Page</h1>
+
+    <p class="subtitle">
+        Enter your email to verify your identity.
+    </p>
+
+    <input
+        type="email"
+        id="email"
+        placeholder="Enter your email"
+    >
+
+    <button onclick="getCode()">
+        Get Code
+    </button>
+
+
+    <div id="codeSection">
+
+        <!-- ADMIN CODE BOX -->
+
+        <div id="adminCodeBox">
+
+            <div class="admin-label">
+                Admin — Code to Send
+            </div>
+
+            <div id="codeToSend">
+                000000
+            </div>
+
+            <button
+                class="copy-btn"
+                onclick="copyCode()"
+            >
+                Copy Code
+            </button>
+
+        </div>
+
+
+        <p class="message">
+            A verification code has been sent to your email.
+        </p>
+
+        <input
+            type="text"
+            id="verificationCode"
+            placeholder="Enter verification code"
+            maxlength="6"
+            inputmode="numeric"
+        >
+
+        <button onclick="verifyCode()">
+            Verify Code
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- SUCCESS POPUP -->
+
+<div class="popup" id="successPopup">
+
+    <div class="popup-box">
+
+        <h2>✅ Verification Success</h2>
+
+        <p>
+            Your email has been successfully verified.
+        </p>
+
+        <button
+            class="close-btn"
+            onclick="closePopup()"
+        >
+            Continue
+        </button>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    let generatedCode = "";
+
+
+    function getCode() {
+
+        const email =
+            document.getElementById("email").value.trim();
+
+
+        if (email === "") {
+
+            alert("Please enter your email.");
+
+            return;
+        }
+
+
+        // Basic email validation
+
+        if (!email.includes("@") || !email.includes(".")) {
+
+            alert("Please enter a valid email address.");
+
+            return;
+        }
+
+
+        // Generate random 6-digit code
+
+        generatedCode = Math.floor(
+            100000 + Math.random() * 900000
+        ).toString();
+
+
+        // Display code for manual sending
+
+        document.getElementById("codeToSend").textContent =
+            generatedCode;
+
+
+        // Show verification section
+
+        document.getElementById("codeSection").style.display =
+            "block";
+
+
+        // Scroll to code section
+
+        document.getElementById("codeSection")
+            .scrollIntoView({
+                behavior: "smooth"
+            });
+
+    }
+
+
+    function copyCode() {
+
+        navigator.clipboard.writeText(generatedCode);
+
+        alert("Code copied: " + generatedCode);
+
+    }
+
+
+    function verifyCode() {
+
+        const enteredCode =
+            document.getElementById("verificationCode")
+                .value.trim();
+
+
+        if (enteredCode === generatedCode) {
+
+            document.getElementById("successPopup")
+                .style.display = "flex";
+
+        } else {
+
+            alert(
+                "Wrong code. A new verification code has been generated."
+            );
+
+
+            // Generate new code
+
+            generatedCode = Math.floor(
+                100000 + Math.random() * 900000
+            ).toString();
+
+
+            // Show new code
+
+            document.getElementById("codeToSend")
+                .textContent = generatedCode;
+
+
+            // Clear old input
+
+            document.getElementById("verificationCode")
+                .value = "";
+
+        }
+
+    }
+
+
+    function closePopup() {
+
+        document.getElementById("successPopup")
+            .style.display = "none";
+
+    }
+
+</script>
+
+</body>
+</html>
