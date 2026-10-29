@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-10-29T18:00:30.313179",
+  "last_run": "2026-10-29T19:00:19.970060",
   "course_pointer": 31,
   "unit_pointers": {
     "GNS111": 2,
@@ -33,7 +33,7 @@
     "GST319": 6,
     "GNS321": 4,
     "GNS324": 6,
-    "GST321": 8
+    "GST321": 9
   },
   "topic_pointers": {
     "GNS111_U1": 0,
@@ -201,7 +201,8 @@
     "GST321_U6": 0,
     "GST321_U7": 0,
     "GST321_U8": 0,
-    "GST321_U9": 4
+    "GST321_U9": 0,
+    "GST321_U10": 1
   },
   "completed_topics": [
     "GNS111_U1_T1",
@@ -2184,8 +2185,9 @@
     "GST321_U9_T1",
     "GST321_U9_T2",
     "GST321_U9_T3",
-    "GST321_U9_T4"
+    "GST321_U9_T4",
+    "GST321_U10_T1"
   ],
-  "total_sent": 1981,
+  "total_sent": 1982,
   "scores": {}
 }
